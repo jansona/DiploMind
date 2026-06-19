@@ -60,6 +60,25 @@ class OperationEngine:
         self.game.set_orders(power, res.accepted)
         return res
 
+    def phase_type(self) -> str:
+        return self.game.phase_type   # M=移动 R=撤退 A=造兵/调整
+
+    def auto_resolve(self) -> None:
+        """非主决策相(撤退/造兵)兜底：各国挑首条合法令，无则空，防卡相。"""
+        for p in self.game.powers:
+            legal = self.legal_orders(p)
+            self.game.set_orders(p, [opts[0] for opts in legal.values() if opts])
+
+    def check_end(self, max_year: int = 1910) -> dict | None:
+        for p, n in self.centers().items():
+            if n >= 18:
+                return {"winner": p, "centers": n}
+        yr = int("".join(filter(str.isdigit, self.phase())) or 0)
+        if yr >= max_year:
+            top = max(self.centers().items(), key=lambda kv: kv[1])
+            return {"draw": True, "leader": top[0], "centers": top[1]}
+        return None
+
     def process(self) -> str:
         self.game.process()
         return self.game.get_current_phase()
