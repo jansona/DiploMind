@@ -17,7 +17,7 @@ from .debuglog import DebugLog
 T = TypeVar("T", bound=BaseModel)
 
 BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = "qwen3.5:9b"
+DEFAULT_MODEL = "qwen3.5:4b"
 
 
 def _fields(schema: Type[BaseModel]) -> str:
@@ -26,9 +26,17 @@ def _fields(schema: Type[BaseModel]) -> str:
 
 
 def _extract(txt: str) -> str:
-    txt = re.sub(r"```(?:json)?|```", "", txt).strip()
-    i, j = txt.find("{"), txt.rfind("}")
-    return txt[i:j + 1] if i >= 0 and j > i else txt
+    """宽松提取：剥 markdown/思考残留，抠最外层 {…}，缺右括号则补齐。"""
+    txt = re.sub(r"```(?:json)?|```", "", txt)
+    txt = re.sub(r"<think>.*?</think>", "", txt, flags=re.S)
+    txt = txt.translate(str.maketrans("“”„‟‘’", '""""\'\'')).strip()  # 全角引号→直引号
+    i = txt.find("{")
+    if i < 0:
+        return txt
+    j = txt.rfind("}")
+    if j > i:
+        return txt[i:j + 1]
+    return txt[i:] + "}" * (txt.count("{") - txt.count("}"))  # 补未闭合括号
 
 
 class Gateway:

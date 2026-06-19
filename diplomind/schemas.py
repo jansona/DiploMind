@@ -32,7 +32,19 @@ class OrderSet(BaseModel):
 
 
 class Message(BaseModel):
-    """谈判一条发言。"""
-    scope: str = Field("broadcast", description="broadcast=大群 / private=私聊")
-    to: list[str] = Field(default_factory=list, description="private 时收件国，broadcast 留空")
-    text: str = Field("", description="发言内容，可真可假，留空=本轮静默")
+    """谈判一条发言。精简三字段，压格式失败。"""
+    type: str = Field("broadcast", description="broadcast 或 private")
+    recipient: list[str] = Field(default_factory=list, description="private 收件国列表，broadcast 留空")
+    content: str = Field("", description="内容，可真可假，留空=本轮静默")
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def _t(cls, v):
+        return "private" if str(v).lower().startswith("priv") else "broadcast"
+
+    @field_validator("recipient", mode="before")
+    @classmethod
+    def _r(cls, v):
+        if v is None or v == "":
+            return []
+        return [v] if isinstance(v, str) else [str(x) for x in v]
