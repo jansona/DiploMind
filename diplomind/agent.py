@@ -5,7 +5,7 @@ from .engine import OperationEngine
 from .gateway import Gateway
 from .memory import Memory
 from .personalities import Persona, system_prompt
-from .schemas import Intent, Message, OrderSet
+from .schemas import AttitudeUpdate, Intent, Message, OrderSet
 
 
 class Agent:
@@ -22,9 +22,18 @@ class Agent:
         return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
-    # 3. 隐藏意图（调模型）：只喂自己
+    # 2. 更新态度（调模型）：读近况事件评各国信任分，写回记忆
+    def update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
+        prompt = self.perceive(eng, inbox) + "\n据近况给接触各国信任分(-100..100)+一词定性，放 scores。"
+        out = self.gw.chat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
+        if out:
+            self.mem.apply_attitude({s.country: {"trust": s.trust, "attitude": s.attitude} for s in out.scores})
+        return out
+
+    # 3. 隐藏意图（调模型）：只喂自己，默认延续上回合微调
     def intent(self, eng: OperationEngine) -> Intent | None:
-        msgs = [self.sys, {"role": "user", "content": self.perceive(eng) + "\n定本回合隐藏意图。"}]
+        prev = f"上回合意图(延续微调):{self.mem.intent}\n" if self.mem.intent else ""
+        msgs = [self.sys, {"role": "user", "content": prev + self.perceive(eng) + "\n定本回合隐藏意图。"}]
         out = self.gw.chat(msgs, Intent, tag=f"{self.country}:intent")
         if out:
             self.mem.intent = out.model_dump()
@@ -56,9 +65,21 @@ class Agent:
         prompt = self._order_prompt(eng, flat)
         out = self.gw.chat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
         chosen = [o for o in (out.orders if out else []) if o in set(flat)]  # 非法剔除=hold
+        for o in chosen:
+            self.mem.record_action(0, self.country, o)
         return out, chosen
 
+    def snapshot(self) -> dict:
+        return {"country": self.country, "persona": self.persona.name, "mem": self.mem.snapshot()}
+
     # --- 异步版（7国并发用）---
+    async def a_update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
+        prompt = self.perceive(eng, inbox) + "\n据近况给接触各国信任分(-100..100)+一词定性，放 scores。"
+        out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
+        if out:
+            self.mem.apply_attitude({s.country: {"trust": s.trust, "attitude": s.attitude} for s in out.scores})
+        return out
+
     async def a_intent(self, eng: OperationEngine) -> Intent | None:
         msgs = [self.sys, {"role": "user", "content": self.perceive(eng) + "\n定本回合隐藏意图。"}]
         out = await self.gw.achat(msgs, Intent, tag=f"{self.country}:intent")
