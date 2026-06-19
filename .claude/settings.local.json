@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ollama --version)",
+      "Bash(curl -s http://localhost:11434/api/tags)",
+      "Bash(uv --version)",
+      "Bash(sysctl hw.memsize)"
+    ]
+  }
+}
