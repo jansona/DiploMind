@@ -23,7 +23,7 @@ class Orchestrator:
             msgs = await asyncio.gather(*(a.a_negotiate(self.eng, inboxes[c]) for c, a in self.agents.items()))
             for c, m in zip(self.agents, msgs):
                 if m:
-                    self.bus.post(rnd, c, m.scope, m.to, m.text)
+                    self.bus.post(rnd, c, m.type, m.recipient, m.content)
             if self.bus.round_silent(rnd):   # 全员静默 → 提前止
                 return rnd
         return MAX_ROUNDS

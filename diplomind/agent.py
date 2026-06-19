@@ -30,10 +30,15 @@ class Agent:
             self.mem.intent = out.model_dump()
         return out
 
-    # 4. 谈判（每轮调模型）
+    NEGO_TPL = ('发一条外交消息。只输出此 JSON，不要解释、不要 markdown：\n'
+                '{"type":"broadcast","recipient":[],"content":"…"}\n'
+                'broadcast=群发(recipient 留空)；private=私聊(recipient 填国名如 ["GERMANY"])；'
+                '无话可说则 content 填""(本轮静默)。')
+
+    # 4. 谈判（每轮调模型）：死模板+精简字段+宽松解析+重试1次，仍坏=空轮
     def negotiate(self, eng: OperationEngine, inbox: str) -> Message | None:
-        ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n发一条言(可真可假，没必要说则 text 留空)。"
-        return self.gw.chat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego")
+        ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n" + self.NEGO_TPL
+        return self.gw.chat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1)
 
     def _legal_flat(self, eng: OperationEngine) -> list[str]:
         legal = eng.legal_orders(self.country)
@@ -62,8 +67,8 @@ class Agent:
         return out
 
     async def a_negotiate(self, eng: OperationEngine, inbox: str) -> Message | None:
-        ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n发一条言(可真可假，没必要说则 text 留空)。"
-        return await self.gw.achat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego")
+        ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n" + self.NEGO_TPL
+        return await self.gw.achat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1)
 
     async def a_decide_orders(self, eng: OperationEngine) -> tuple[OrderSet | None, list[str]]:
         flat = self._legal_flat(eng)
