@@ -1,0 +1,16 @@
+[project]
+name = "diplomind"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.11"
+dependencies = [
+    "diplomacy>=1.1.2",
+    "openai>=2.43.0",
+    "pydantic>=2.13.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+]
