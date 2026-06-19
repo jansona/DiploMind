@@ -45,3 +45,20 @@ class Orchestrator:
             a.mem.tick()
         out["nego_rounds"] = stop
         return out
+
+    async def run_phase(self) -> dict:
+        """移动相=完整谈判+下令；撤退/造兵相=引擎兜底自动结算。"""
+        if self.eng.phase_type() == "M":
+            self.bus = MessageBus()
+            return await self.run_round()
+        self.eng.auto_resolve()
+        return {"phase": self.eng.process(), "auto": True}
+
+    async def run_game(self, max_phases: int = 6, max_year: int = 1910) -> dict:
+        log = []
+        for _ in range(max_phases):
+            log.append(await self.run_phase())
+            end = self.eng.check_end(max_year)
+            if end:
+                return {"end": end, "phases": len(log)}
+        return {"end": None, "phases": len(log), "centers": self.eng.centers()}
