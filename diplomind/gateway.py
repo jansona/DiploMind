@@ -19,6 +19,13 @@ T = TypeVar("T", bound=BaseModel)
 BASE_URL = "http://localhost:11434"
 DEFAULT_MODEL = "qwen3.5:4b"
 
+# 难度=纯模型档位：弱模型策略/圆谎差=简单，强=困难。AI 目标不变、不放水。
+DIFFICULTY = {"easy": "qwen3.5:4b", "normal": "qwen3.5:4b", "hard": "qwen3.5:9b"}
+
+
+def assign(difficulty: str = "normal") -> str:
+    return DIFFICULTY.get(difficulty, DEFAULT_MODEL)
+
 
 def _fields(schema: Type[BaseModel]) -> str:
     props = schema.model_json_schema().get("properties", {})
