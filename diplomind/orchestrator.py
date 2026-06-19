@@ -17,6 +17,7 @@ class Orchestrator:
         self.eng, self.agents, self.bus = eng, agents, MessageBus()
 
     async def negotiate(self) -> int:
+        await asyncio.gather(*(a.a_update(self.eng) for a in self.agents.values()))   # 先评态度
         await asyncio.gather(*(a.a_intent(self.eng) for a in self.agents.values()))
         for rnd in range(1, MAX_ROUNDS + 1):
             inboxes = {c: self.bus.inbox(c, rnd - 1) for c in self.agents}
@@ -40,5 +41,7 @@ class Orchestrator:
     async def run_round(self) -> dict:
         stop = await self.negotiate()
         out = await self.collect_and_process()
+        for a in self.agents.values():           # 回合末承诺倒计时
+            a.mem.tick()
         out["nego_rounds"] = stop
         return out

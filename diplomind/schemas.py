@@ -25,6 +25,25 @@ class Intent(BaseModel):
         return v if isinstance(v, int) else 0
 
 
+class Attitude(BaseModel):
+    """态度评分：模型读事件后给各国信任分(-100..100)+一句定性。"""
+    country: str = Field(description="对象国")
+    trust: int = Field(0, description="-100敌对..100盟友")
+    attitude: str = Field("中立", description="一词定性")
+
+    @field_validator("trust", mode="before")
+    @classmethod
+    def _i(cls, v):
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            return 0
+
+
+class AttitudeUpdate(BaseModel):
+    scores: list[Attitude] = Field(default_factory=list)
+
+
 class OrderSet(BaseModel):
     """下令：每条必须原样取自给定合法命令表。"""
     orders: list[str] = Field(default_factory=list, description="从合法表逐字挑选的命令")
