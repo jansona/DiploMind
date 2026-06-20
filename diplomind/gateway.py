@@ -1,7 +1,4 @@
-"""LLM 网关 Gateway — 接 ollama；prompt 注入字段说明 + 宽松提取 JSON + pydantic 校验+重试；
-记每次调用耗时/token/重试/格式失败；think:false 关思考省延迟。
-
-注：qwen3.5:9b 上 ollama 的 format=schema 语法约束慢/失效，故走 prompt 引导 + 容错解析。"""
+"""LLM gateway over ollama: prompt-injected field hints + lenient JSON + pydantic validate/retry; logs latency/tokens/retries/fmt-fail; think:false. /v1 ignores think (35x slower), so use native /api/chat."""
 from __future__ import annotations
 
 import asyncio
@@ -19,9 +16,9 @@ from .debuglog import DebugLog
 T = TypeVar("T", bound=BaseModel)
 
 BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = os.getenv("DIPLOMIND_MODEL", "qwen3.5:4b")   # 开服可换: DIPLOMIND_MODEL=qwen3.5:2b
+DEFAULT_MODEL = os.getenv("DIPLOMIND_MODEL", "qwen3.5:4b")   # configurable at boot: DIPLOMIND_MODEL=qwen3.5:2b
 
-# 难度=纯模型档位：弱模型策略/圆谎差=简单，强=困难。AI 目标不变、不放水。
+# Difficulty = model tier; weaker=easier. AI goal unchanged.
 DIFFICULTY = {"easy": "qwen3.5:4b", "normal": "qwen3.5:4b", "hard": "qwen3.5:9b"}
 
 
@@ -35,17 +32,17 @@ def _fields(schema: Type[BaseModel]) -> str:
 
 
 def _extract(txt: str) -> str:
-    """宽松提取：剥 markdown/思考残留，抠最外层 {…}，缺右括号则补齐。"""
+    """Lenient extract: strip markdown/think, take outer {...}, balance braces."""
     txt = re.sub(r"```(?:json)?|```", "", txt)
     txt = re.sub(r"<think>.*?</think>", "", txt, flags=re.S)
-    txt = txt.translate(str.maketrans("“”„‟‘’", '""""\'\'')).strip()  # 全角引号→直引号
+    txt = txt.translate(str.maketrans("“”„‟‘’", '""""\'\'')).strip()  # fullwidth->straight quotes
     i = txt.find("{")
     if i < 0:
         return txt
     j = txt.rfind("}")
     if j > i:
         return txt[i:j + 1]
-    return txt[i:] + "}" * (txt.count("{") - txt.count("}"))  # 补未闭合括号
+    return txt[i:] + "}" * (txt.count("{") - txt.count("}"))  # close braces
 
 
 class Gateway:
@@ -53,17 +50,17 @@ class Gateway:
                  temperature: float = 0.7, think: bool = False, concurrency: int = 3,
                  constrain: bool = True) -> None:
         self.model, self.temperature, self.think = model, temperature, think
-        self.constrain = constrain                       # 重开 ollama format 语法硬约束(4b)
+        self.constrain = constrain                       # ollama grammar constraint (4b)
         self.log = log or DebugLog()
         self.sync = httpx.Client(base_url=BASE_URL, trust_env=False, timeout=180)
         self.aclient = httpx.AsyncClient(base_url=BASE_URL, trust_env=False, timeout=180)
         self.concurrency = concurrency
-        self._sem: asyncio.Semaphore | None = None      # 限并发：最多 N 国同时打 ollama，余者排队
+        self._sem: asyncio.Semaphore | None = None      # concurrency cap: N at a time
         self._loop = None
 
     def _gate(self) -> asyncio.Semaphore:
         loop = asyncio.get_running_loop()
-        if self._sem is None or self._loop is not loop:  # 换了事件循环就重建(web 每请求一循环)
+        if self._sem is None or self._loop is not loop:  # rebuild on new loop
             self._sem, self._loop = asyncio.Semaphore(self.concurrency), loop
         return self._sem
 
@@ -73,13 +70,13 @@ class Gateway:
 
     def _body(self, messages, schema, temp=None):
         b = {"model": self.model, "messages": self._msgs(messages, schema), "stream": False, "think": self.think,
-             "options": {"temperature": self.temperature if temp is None else temp, "num_predict": 320}}  # 截输出, 压尾延迟
-        if self.constrain:                               # 语法硬约束：解码只能产出合法 schema
+             "options": {"temperature": self.temperature if temp is None else temp, "num_predict": 320}}  # cap output to tame tail latency
+        if self.constrain:                               # grammar constraint -> valid schema only
             b["format"] = schema.model_json_schema()
         return b
 
     @staticmethod
-    def _retry_hint(messages, txt):                      # 失败把报错喂回去重试
+    def _retry_hint(messages, txt):                      # feed parse error back on retry
         return messages + [{"role": "user", "content": f"上次输出无法解析为目标JSON：{txt[:120]}。只输出合法JSON，别加任何解释。"}]
 
     def _validate(self, data, schema, ms, tag, attempt, fails):
@@ -107,7 +104,7 @@ class Gateway:
         return None
 
     async def achat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
-        async with self._gate():                        # 整次调用(含重试)占一个名额
+        async with self._gate():                        # whole call holds one slot
             msgs, fails = messages, 0
             for attempt in range(retry + 1):
                 t0 = time.time()

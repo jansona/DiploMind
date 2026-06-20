@@ -1,12 +1,12 @@
-"""LLM 结构化输出 schema。命令一律从引擎合法表挑，非法即 hold。
-字段宽松带默认：小模型常吐 null/缺字段，default 兜底避免无谓重试。"""
+"""LLM structured-output schemas. Orders must come from the engine legal list; illegal=hold.
+Lenient fields with defaults: small models emit null/missing; defaults avoid retries."""
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
 
 class Intent(BaseModel):
-    """隐藏意图：私有短文，只喂自己，永不外发。"""
+    """Hidden intent: private, fed only to self."""
     goal: str = Field("", description="本回合真目标，一句话")
     ally: str = Field("", description="想拉拢谁")
     target: str = Field("", description="想坑谁")
@@ -14,7 +14,7 @@ class Intent(BaseModel):
 
     @field_validator("goal", "ally", "target", mode="before")
     @classmethod
-    def _str(cls, v):  # 小模型常吐 null/列表，统一压成字符串
+    def _str(cls, v):  # coerce null/list to string
         if v is None:
             return ""
         return ", ".join(map(str, v)) if isinstance(v, list) else str(v)
@@ -26,7 +26,7 @@ class Intent(BaseModel):
 
 
 class AttitudeUpdate(BaseModel):
-    """态度评分：顺模型天性收 {国: 分} 字典；也吞 list-of-objects / null，统一成 {国:{trust}}。"""
+    """Accept {country: score} dict; also list/null, normalized."""
     scores: dict[str, int] = Field(default_factory=dict, description='如 {"GERMANY": -50}')
 
     @field_validator("scores", mode="before")
@@ -46,13 +46,13 @@ class AttitudeUpdate(BaseModel):
 
 
 class OrderSet(BaseModel):
-    """下令：每条必须原样取自给定合法命令表。"""
+    """Orders: each verbatim from the legal list."""
     orders: list[str] = Field(default_factory=list, description="从合法表逐字挑选的命令")
     reasoning: str = Field("", description="一句话理由")
 
 
 class Message(BaseModel):
-    """谈判一条发言。精简三字段，压格式失败。"""
+    """One negotiation message; slim 3 fields."""
     type: str = Field("broadcast", description="broadcast 或 private")
     recipient: list[str] = Field(default_factory=list, description="private 收件国列表，broadcast 留空")
     content: str = Field("", description="内容，可真可假，留空=本轮静默")

@@ -1,7 +1,8 @@
-"""操作引擎 OperationEngine — 复用 diplomacy 引擎做地图/合法走子/裁决/存档。
+"""OperationEngine — reuses the diplomacy engine for map/legal moves/adjudication/save.
 
-纯规则，不碰 LLM。非法/格式坏命令正常不该出现（LLM 只从合法列表选）；
-一旦发生即记 error 日志并让该国 hold，事后修，不用随机走子掩盖。
+Pure rules, no LLM. Illegal orders shouldn't normally occur (the LLM only picks
+from the legal list); if one does, log it and hold that power — don't mask with
+random moves.
 """
 from __future__ import annotations
 
@@ -23,16 +24,16 @@ class SubmitResult:
 
 
 class OperationEngine:
-    """对 diplomacy.Game 的薄封装，暴露 demo 验证清单任务1 需要的接口。"""
+    """Thin wrapper over diplomacy.Game exposing the interfaces we need."""
 
     def __init__(self, active_powers: Iterable[str] | None = None) -> None:
         self.game = Game()
         all_powers = list(self.game.powers.keys())
         self.active_powers = list(active_powers) if active_powers else all_powers
-        # 非激活国 = 中立：不下令即全 hold，不参与谈判。引擎层只需不给它们命令。
+        # inactive powers = neutral: hold (no orders), no negotiation; engine just gives them nothing
         self.dummy_powers = [p for p in all_powers if p not in self.active_powers]
 
-    # --- 状态 ---
+    # --- state ---
     def phase(self) -> str:
         return self.game.get_current_phase()
 
@@ -42,13 +43,13 @@ class OperationEngine:
     def centers(self) -> dict[str, int]:
         return {p: len(self.game.powers[p].centers) for p in self.game.powers}
 
-    # --- 合法命令：每个可下令地块 -> 合法命令列表 ---
+    # --- legal orders: per orderable location -> list of legal orders ---
     def legal_orders(self, power: str) -> dict[str, list[str]]:
         all_orders = self.game.get_all_possible_orders()
         locs = self.game.get_orderable_locations(power)
         return {loc: all_orders.get(loc, []) for loc in locs}
 
-    # --- 提交：逐条对照合法表校验，非法剔除并记录原因 ---
+    # --- submit: validate each against legal list, drop illegal and record reason ---
     def submit(self, power: str, orders: list[str]) -> SubmitResult:
         legal = {o for opts in self.legal_orders(power).values() for o in opts}
         res = SubmitResult(power=power)
@@ -61,10 +62,10 @@ class OperationEngine:
         return res
 
     def phase_type(self) -> str:
-        return self.game.phase_type   # M=移动 R=撤退 A=造兵/调整
+        return self.game.phase_type   # M=Movement R=Retreat A=Adjustment(build)
 
     def auto_resolve(self, except_: str | None = None) -> None:
-        """非主决策相(撤退/造兵)兜底：各国挑首条合法令，无则空，防卡相。except_ 跳过(人已自选)。"""
+        """Fallback for retreat/build phases: each power takes the first legal order. except_ skips (human chose)."""
         for p in self.game.powers:
             if p == except_:
                 continue
@@ -73,10 +74,10 @@ class OperationEngine:
 
     def check_end(self, max_year: int = 1910) -> dict | None:
         for p, n in self.centers().items():
-            if n >= 18:                                   # 18中心独霸=胜
+            if n >= 18:                                   # 18 centers = solo win
                 return {"winner": p, "centers": n}
         yr = int("".join(filter(str.isdigit, self.phase())) or 0)
-        if yr >= max_year:                                # 到最大回合: 所有存活玩家(>0中心)和局
+        if yr >= max_year:                                # max year: all survivors (>0 centers) draw
             survivors = sorted([p for p, n in self.centers().items() if n > 0])
             return {"draw": True, "survivors": survivors, "centers": self.centers()}
         return None
