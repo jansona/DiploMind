@@ -58,11 +58,16 @@ class Session:
 
     async def human_say(self, scope, recipient, content, skip=False) -> dict:
         p = self.players.get(self.human)
-        if self.mode != "NEGO" or not p._msg or p._msg.done():     # 没轮到/本轮已操作 → 拒, 报错
-            return {"ok": False, "reason": "本轮已发言或跳过"}
-        m = None if (skip or not content.strip()) else Message(type=scope, recipient=recipient, content=content)
-        self.players[self.human].submit_msg(m)
+        if self.mode != "NEGO" or not p._msg or p._msg.done():     # 没轮到/本轮已操作 → 拒
+            return {"ok": False, "reason": "还没轮到你/本轮已操作"}
+        if not skip and not content.strip():                       # 空消息不发
+            return {"ok": False, "reason": "不能发空消息"}
+        self.players[self.human].submit_msg(None if skip else Message(type=scope, recipient=recipient, content=content))
         return {"ok": True}
+
+    def your_turn(self) -> bool:
+        p = self.players.get(self.human)
+        return bool(self.mode == "NEGO" and p and getattr(p, "_msg", None) and not p._msg.done())
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:
@@ -107,7 +112,7 @@ class Session:
         chans = self.bus.channels(self.human, self.round) if self.human else {}
         for k in self._opened: chans.setdefault(k, [])
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
-                "pending": self.pending(), "human_done": self.human not in self.pending(),
+                "pending": self.pending(), "human_done": self.human not in self.pending(), "your_turn": self.your_turn(),
                 "centers": self.eng.centers(), "channels": chans,
                 "legal": self.legal() if self.mode == "ORDERS" else []}
 
