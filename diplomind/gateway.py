@@ -49,15 +49,15 @@ class Gateway:
     def __init__(self, model: str = DEFAULT_MODEL, log: DebugLog | None = None,
                  temperature: float = 0.7, think: bool = False, concurrency: int = 3,
                  constrain: bool = True, base_url: str = BASE_URL, api_key: str = "ollama",
-                 api: str = "ollama") -> None:
+                 api: str = "ollama", timeout: int = 120) -> None:
         self.model, self.temperature, self.think = model, temperature, think
         self.constrain = constrain                       # ollama grammar constraint (4b)
         self.api = api                                   # "ollama" native /api/chat, or "openai" compatible
         self.path = "/api/chat" if api == "ollama" else "/chat/completions"   # base_url already ends with /v1
         self.log = log or DebugLog()
         hdr = {} if api == "ollama" else {"Authorization": f"Bearer {api_key}"}
-        self.sync = httpx.Client(base_url=base_url, trust_env=False, timeout=180, headers=hdr)
-        self.aclient = httpx.AsyncClient(base_url=base_url, trust_env=False, timeout=180, headers=hdr)
+        self.sync = httpx.Client(base_url=base_url, trust_env=False, timeout=timeout, headers=hdr)
+        self.aclient = httpx.AsyncClient(base_url=base_url, trust_env=False, timeout=timeout, headers=hdr)
         self.concurrency = concurrency
         self._sem: asyncio.Semaphore | None = None      # concurrency cap: N at a time
         self._loop = None
