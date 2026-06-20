@@ -18,5 +18,5 @@ def test_config_file_loads(tmp_path):
 
 def test_gateway_openai_route():
     gw = Gateway(api="openai", base_url="https://x/v1", api_key="k")
-    assert gw.path == "/v1/chat/completions"                          # 非ollama走openai兼容
+    assert gw.path == "/chat/completions"                             # 非ollama走openai兼容(base_url含/v1)
     assert Gateway(api="ollama").path == "/api/chat"
