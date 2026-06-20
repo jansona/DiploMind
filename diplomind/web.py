@@ -99,13 +99,14 @@ chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(
 if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
-bs.disabled=bk.disabled=t.disabled=!!s.human_done;S(st,s.human_done?'✓本轮已操作,等其他玩家':'');
+bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?'轮到你':(s.human_done?'✓本轮已操作,等其他玩家':'⏳ AI准备中…'));
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE'}))}
-async function say(sk){if(t.disabled)return;bs.disabled=bk.disabled=t.disabled=true;st.textContent='✓本轮已操作,等其他玩家';
+async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠ 不能发空消息';return}
+bs.disabled=bk.disabled=t.disabled=true;st.textContent='发送中…';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});
-if(!r.ok)st.textContent='⚠ '+r.reason;else t.value='';R(r.state)}   // 重复操作被拒, 不静默跳轮
+if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
 async function sub(){await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}
 setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
