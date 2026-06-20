@@ -72,6 +72,16 @@ async def load():
 def chron():
     return {"text": book(S["game"].chronicle) if S["game"] else ""}
 
+@app.get("/api/relations")        # 关系图: 各国信任分
+def relations():
+    g = S["game"]; return {c: {k: v.trust for k, v in a.mem.relations.items()} for c, a in g.ai.items()} if g else {}
+
+@app.get("/api/betrayals")         # 背叛高光
+def betrayals():
+    g = S["game"]
+    return {"items": [{"who": c, "by": a.actor, "act": a.action, "yr": a.round}
+                      for c, ag in (g.ai.items() if g else []) for a in ag.mem.actions if a.betray]}
+
 @app.get("/api/snapshot")
 def snap():
     g = S["game"]; return snapshot(g.ai, g.bus, g.eng) if g else {}
@@ -95,6 +105,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过本轮</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
+<h3>内幕(观战/debug)</h3><button onclick=relo()>刷新关系/背叛</button><div id=rel></div><div id=bet></div>
 <script>
 let act='群聊',chans={},mphase='',keys='',legal='';     // 仅这些变了才动DOM, 不碰你的tab/输入/勾选
 function S(el,v){if(el.textContent!=v)el.textContent=v}    // 变了才改, 避免无谓重渲染
@@ -118,4 +129,6 @@ let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});
 if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
 async function sub(){await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}
+async function relo(){let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→{'+Object.entries(v).map(([a,t])=>a+':'+t).join(' ')+'}').join('  ');
+let b=await G('/api/betrayals');bet.innerHTML='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act+'('+x.yr+')').join(' | ')||'暂无')}
 setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
