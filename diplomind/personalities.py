@@ -23,8 +23,14 @@ PERSONAS = {
 }
 
 
-def system_prompt(country: str, p: Persona) -> str:
+LANGS = {"zh-Hans": "简体中文", "zh-Hant": "繁體中文", "en": "English",
+         "ja": "日本語", "ko": "한국어", "de": "Deutsch", "es": "Español"}
+
+
+def system_prompt(country: str, p: Persona, lang: str = "zh-Hans") -> str:
+    name = LANGS.get(lang, "简体中文")
     return (f"你扮演《外交》(Diplomacy)中的 {country}，打法=「{p.name}」。"
             f"性格：侵略性{p.aggression}、守信度{p.loyalty}、瞒骗区间{p.betray_window}、"
             f"结盟倾向{p.ally_tendency}、目标盟友={p.ally_target}。"
-            f"你始终为自己赢（占18中心），可结盟/撒谎/背刺，不放水。只输出 JSON。")
+            f"你始终为自己赢（占18中心），可结盟/撒谎/背刺，不放水。"
+            f"谈判发言必须用{name}。只输出 JSON。")
