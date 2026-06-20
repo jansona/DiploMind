@@ -16,6 +16,7 @@ class Config:
     rounds: int = 3                              # negotiation rounds per phase
     lang: str = "zh-Hans"
     concurrency: int = 3
+    human: str = "FRANCE"                         # which power the human plays; null = all-AI spectate
 
 
 def load() -> Config:
