@@ -31,11 +31,11 @@ class MessageBus:
         for m in self.msgs:
             if m.rnd > upto_round:
                 continue
-            who = "我" if m.sender == power else m.sender
+            who = f"我({power})" if m.sender == power else m.sender
             if m.scope == "broadcast":                       # 群聊全员可见(含自己)
                 lines.append(f"R{m.rnd} {who}·群发: {m.text}")
             elif m.sender == power and include_self:          # 自己发的私聊
-                lines.append(f"R{m.rnd} 我·私聊@{','.join(m.to)}: {m.text}")
+                lines.append(f"R{m.rnd} 我({power})·私聊@{','.join(m.to)}: {m.text}")
             elif power in m.to:                               # 发给我的私聊
                 lines.append(f"R{m.rnd} {who}·私聊@你: {m.text}")
         return "\n".join(lines)
