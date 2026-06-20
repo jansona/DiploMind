@@ -35,9 +35,12 @@ async def test_six_ai_one_human():
     assert len(s.ai) == 6 and s.pending() == ["FRANCE"]   # AI齐, 只等人
 
 @pytest.mark.asyncio
-async def test_human_send_advances():
+async def test_human_send_idempotent_same_round():
     s = _sess(); await s.begin_phase(); await _tick()
-    await s.human_say("broadcast", [], "和平"); await _tick()
+    r1 = await s.human_say("broadcast", [], "和平")     # 先发, 立刻再点(未推进)
+    dup = await s.human_say("broadcast", [], "又点")     # 同轮重复 → 拒, 不静默跳轮
+    assert r1["ok"] and dup["ok"] is False
+    await _tick()
     assert s.round == 2 and any("和平" in m.text for m in s.bus.msgs)
 
 @pytest.mark.asyncio
