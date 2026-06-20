@@ -35,7 +35,7 @@ class Session:
         self.max_year = max_year; self.lang = lang or cfg.lang
         self.rounds = cfg.rounds                          # negotiation rounds from config
         self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
-                          api=cfg.api, concurrency=cfg.concurrency)
+                          api=cfg.api, concurrency=cfg.concurrency, timeout=cfg.timeout)
         self.eng = OperationEngine(POWERS)
         keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
         chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}

@@ -17,6 +17,7 @@ class Config:
     lang: str = "zh-Hans"
     concurrency: int = 3
     human: str = "FRANCE"                         # which power the human plays; null = all-AI spectate
+    timeout: int = 120                            # per-call LLM timeout (s); slow calls give up -> hold
 
 
 def load() -> Config:
