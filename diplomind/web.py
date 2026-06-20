@@ -65,24 +65,31 @@ def index():
 
 
 INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
-<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}</style>
+<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}</style>
 <h2>DiploMind — 你 <b id=h>FRANCE</b></h2><button onclick=nw()>新局</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
-<h3>中心</h3><div id=c></div><h3>收件</h3><div id=log></div>
+<h3>中心</h3><div id=c></div>
+<h3>聊天</h3><div id=tabs></div><button onclick=newp()>+私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过本轮</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
 <script>
 let busy=0;async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
-function R(s){ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=s.human||'观战';
-c.textContent=Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' ');log.textContent=s.inbox||'(空)';
+let act='群聊',chans={};function R(s){ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=s.human||'观战';
+c.textContent=Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' ');chans=s.channels||{'群聊':[]};
+if(!chans[act])chans[act]=[];tabs.innerHTML=Object.keys(chans).map(k=>'<button class='+(k==act?'on':'')+' onclick=pick("'+k+'")>'+(k=='群聊'?k:k)+'</button>').join('');
+log.textContent=(chans[act]||[]).join('\\n')||'(空)';
 pd.textContent=(s.pending||[]).join(',')||'—';nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 let mine=(s.pending||[]).includes(s.human);bs.disabled=bk.disabled=t.disabled=!mine;  // 本轮发过就禁用,下轮恢复
 if(mine)acted='';st.textContent=acted?('✓本轮已'+acted+',等其他玩家'):'';
 os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');
 if(s.phase!=last){last=s.phase;fetch('/api/map').then(r=>r.text()).then(t=>map.innerHTML=t)}}
 let last='',acted='';async function nw(){last='';acted='';R(await G('/api/new','POST',{human:'FRANCE'}));ch.textContent=''}
-async function say(sk){acted=sk?'跳过':'发言';st.textContent='✓本轮已'+acted+',等其他玩家';R(await G('/api/say','POST',{content:t.value,skip:!!sk}));t.value=''}
+function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')}
+function newp(){let p=prompt('私聊对象(逗号分隔,如 GERMANY,ITALY)');if(!p)return;act=[H,...p.split(',').map(x=>x.trim().toUpperCase())].sort().join('·');if(!chans[act])chans[act]=[];pick(act)}
+const H='FRANCE';async function say(sk){acted=sk?'跳过':'发言';st.textContent='✓本轮已'+acted+',等其他玩家';
+let scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
+R(await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk}));t.value=''}
 async function sub(){let o=[...os.selectedOptions].map(x=>x.value);await G('/api/orders','POST',{orders:o});ch.textContent=(await G('/api/chronicle')).text}
 setInterval(async()=>{R(await G('/api/state'))},2000);nw()</script>"""

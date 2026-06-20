@@ -26,6 +26,22 @@ class MessageBus:
     def round_silent(self, rnd: int) -> bool:
         return not any(m.rnd == rnd for m in self.msgs)
 
+    def channels(self, power: str, upto_round: int) -> dict[str, list[str]]:
+        """按频道分组该国可见消息：'群聊' + 各私聊国家组合(键=排序成员)。每条带轮次。"""
+        out: dict[str, list[str]] = {"群聊": []}
+        for m in self.msgs:
+            if m.rnd > upto_round:
+                continue
+            who = f"我({power})" if m.sender == power else m.sender
+            if m.scope == "broadcast":
+                out["群聊"].append(f"R{m.rnd} {who}: {m.text}")
+                continue
+            members = sorted({m.sender, *m.to})
+            if power not in members:
+                continue                                    # 与我无关的私聊不可见
+            out.setdefault("·".join(members), []).append(f"R{m.rnd} {who}: {m.text}")
+        return out
+
     def inbox(self, power: str, upto_round: int, include_self: bool = False) -> str:
         lines = []
         for m in self.msgs:
