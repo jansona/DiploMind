@@ -16,7 +16,6 @@ with sync_playwright() as pw:
     tabs = pg.eval_on_selector_all("#tabs button", "els=>els.map(e=>e.textContent)")
     assert "FRANCE·GERMANY" in tabs; pg.click("text=FRANCE·GERMANY"); print("✓ 私聊tab可切:", tabs)
     pg.click("text=刷新关系/背叛"); pg.wait_for_timeout(500); assert "关系" in pg.text_content("#rel"); print("✓ 关系/背叛面板")
-    pg.click("text=看内脏"); pg.wait_for_timeout(500); assert "AUSTRIA" in pg.text_content("#dbgv"); print("✓ 观战内脏(意图/记忆/暗盘)")
-    assert "性格" in pg.text_content("#per"); print("✓ 性格显示")
+    pg.click("text=看内脏"); pg.wait_for_timeout(500); assert "persona" in pg.text_content("#dbgv"); print("✓ 内脏含隐藏性格(仅debug)")
     pg.click("text=Guide"); pg.wait_for_timeout(500); assert "命令缩写" in pg.text_content("#gv") and "PAR" in pg.text_content("#gv"); print("✓ Guide:地名+命令缩写表")
     b.close(); print("ALL PASS")

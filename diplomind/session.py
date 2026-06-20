@@ -159,7 +159,7 @@ class Session:
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
                 "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
-                "centers": self.eng.centers(), "channels": chans, "lang": self.lang, "persona": self.persona_of,
+                "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # 性格隐藏, 仅debug snapshot可见
                 "phase_type": self.eng.phase_type(), "legal": self.legal() if self.mode == "ORDERS" else []}
 
 
