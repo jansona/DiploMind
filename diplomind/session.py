@@ -97,15 +97,21 @@ class Session:
     async def submit(self, human_orders) -> dict:
         if self.human:
             self.eng.submit(self.human, [o for o in human_orders if o in self.eng_legal(self.human)])
-        ai = self.ai_players()
-        outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))   # AI 走同一 decide 接口
-        for p, chosen in zip(ai, outs):
-            self.eng.submit(p.country, chosen)
+        if self.eng.phase_type() == "M":                 # 移动相: AI LLM 下令; 撤退/造兵相: AI 兜底
+            ai = self.ai_players()
+            outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))
+            for p, chosen in zip(ai, outs):
+                self.eng.submit(p.country, chosen)
+        else:
+            self.eng.auto_resolve(except_=self.human)    # 撤退/造兵: AI兜底, 人已自选
         before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
         nxt = self.eng.process()
-        while self.eng.phase_type() != "M" and not self.eng.is_done():
-            self.eng.auto_resolve(); nxt = self.eng.process()
         self._detect_betrayal(before)                # 抢盟友中心=背叛, 入账记仇
+        # 撤退/造兵相: AI 自动, 人有合法令则停下点; 否则继续到下个移动相
+        while self.eng.phase_type() != "M" and not self.eng.is_done():
+            if self.human and self.legal():
+                self.mode = "ORDERS"; return {"phase": nxt, "build": True, "end": None}
+            self.eng.auto_resolve(); nxt = self.eng.process()
         log.info("结算 -> %s", nxt)
         self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()

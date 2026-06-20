@@ -63,9 +63,11 @@ class OperationEngine:
     def phase_type(self) -> str:
         return self.game.phase_type   # M=移动 R=撤退 A=造兵/调整
 
-    def auto_resolve(self) -> None:
-        """非主决策相(撤退/造兵)兜底：各国挑首条合法令，无则空，防卡相。"""
+    def auto_resolve(self, except_: str | None = None) -> None:
+        """非主决策相(撤退/造兵)兜底：各国挑首条合法令，无则空，防卡相。except_ 跳过(人已自选)。"""
         for p in self.game.powers:
+            if p == except_:
+                continue
             legal = self.legal_orders(p)
             self.game.set_orders(p, [opts[0] for opts in legal.values() if opts])
 
