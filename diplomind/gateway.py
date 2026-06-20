@@ -48,12 +48,16 @@ def _extract(txt: str) -> str:
 class Gateway:
     def __init__(self, model: str = DEFAULT_MODEL, log: DebugLog | None = None,
                  temperature: float = 0.7, think: bool = False, concurrency: int = 3,
-                 constrain: bool = True) -> None:
+                 constrain: bool = True, base_url: str = BASE_URL, api_key: str = "ollama",
+                 api: str = "ollama") -> None:
         self.model, self.temperature, self.think = model, temperature, think
         self.constrain = constrain                       # ollama grammar constraint (4b)
+        self.api = api                                   # "ollama" native /api/chat, or "openai" compatible
+        self.path = "/api/chat" if api == "ollama" else "/v1/chat/completions"
         self.log = log or DebugLog()
-        self.sync = httpx.Client(base_url=BASE_URL, trust_env=False, timeout=180)
-        self.aclient = httpx.AsyncClient(base_url=BASE_URL, trust_env=False, timeout=180)
+        hdr = {} if api == "ollama" else {"Authorization": f"Bearer {api_key}"}
+        self.sync = httpx.Client(base_url=base_url, trust_env=False, timeout=180, headers=hdr)
+        self.aclient = httpx.AsyncClient(base_url=base_url, trust_env=False, timeout=180, headers=hdr)
         self.concurrency = concurrency
         self._sem: asyncio.Semaphore | None = None      # concurrency cap: N at a time
         self._loop = None
@@ -69,18 +73,28 @@ class Gateway:
         return [{**m, "content": m["content"] + spec} if m["role"] == "system" else m for m in messages]
 
     def _body(self, messages, schema, temp=None):
-        b = {"model": self.model, "messages": self._msgs(messages, schema), "stream": False, "think": self.think,
-             "options": {"temperature": self.temperature if temp is None else temp, "num_predict": 320}}  # cap output to tame tail latency
-        if self.constrain:                               # grammar constraint -> valid schema only
-            b["format"] = schema.model_json_schema()
-        return b
+        msgs = self._msgs(messages, schema)
+        t = self.temperature if temp is None else temp
+        if self.api == "ollama":
+            b = {"model": self.model, "messages": msgs, "stream": False, "think": self.think,
+                 "options": {"temperature": t, "num_predict": 320}}
+            if self.constrain:                           # grammar constraint -> valid schema only
+                b["format"] = schema.model_json_schema()
+            return b
+        return {"model": self.model, "messages": msgs, "temperature": t, "max_tokens": 320,
+                "response_format": {"type": "json_object"}}   # OpenAI-compatible
 
     @staticmethod
     def _retry_hint(messages, txt):                      # feed parse error back on retry
         return messages + [{"role": "user", "content": f"上次输出无法解析为目标JSON：{txt[:120]}。只输出合法JSON，别加任何解释。"}]
 
+    def _content(self, data):                            # unify ollama vs openai response shape
+        if self.api == "ollama":
+            return data.get("message", {}).get("content", "")
+        return (data.get("choices") or [{}])[0].get("message", {}).get("content", "")
+
     def _validate(self, data, schema, ms, tag, attempt, fails):
-        txt = data.get("message", {}).get("content", "")
+        txt = self._content(data)
         tok = data.get("eval_count", 0) + data.get("prompt_eval_count", 0)
         try:
             obj = schema.model_validate_json(_extract(txt))
@@ -96,11 +110,11 @@ class Gateway:
         msgs, fails = messages, 0
         for attempt in range(retry + 1):
             t0 = time.time()
-            data = self.sync.post("/api/chat", json=self._body(msgs, schema, temp)).json()
+            data = self.sync.post(self.path, json=self._body(msgs, schema, temp)).json()
             obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
             if obj is not None:
                 return obj
-            msgs = self._retry_hint(messages, data.get("message", {}).get("content", ""))
+            msgs = self._retry_hint(messages, self._content(data))
         return None
 
     async def achat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
@@ -108,9 +122,9 @@ class Gateway:
             msgs, fails = messages, 0
             for attempt in range(retry + 1):
                 t0 = time.time()
-                data = (await self.aclient.post("/api/chat", json=self._body(msgs, schema, temp))).json()
+                data = (await self.aclient.post(self.path, json=self._body(msgs, schema, temp))).json()
                 obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
                 if obj is not None:
                     return obj
-                msgs = self._retry_hint(messages, data.get("message", {}).get("content", ""))
+                msgs = self._retry_hint(messages, self._content(data))
             return None

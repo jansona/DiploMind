@@ -17,9 +17,9 @@ class Agent:
     # 1. perceive (no model): board+inbox+memory -> text
     def perceive(self, eng: OperationEngine, inbox: str = "") -> str:
         g = eng.game
-        mine = g.powers[self.country].units                      # only own units (compact context)
+        units = {p: g.powers[p].units for p in eng.active_powers}  # all units: rivals' scale matters for talks
         cen = eng.centers()
-        return (f"阶段:{eng.phase()} 中心:{cen} 我方单位:{mine}\n"
+        return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
     NEGO_TPL = ('发一条外交消息。只输出此 JSON，不要解释、不要 markdown：\n'
