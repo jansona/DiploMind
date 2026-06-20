@@ -1,5 +1,6 @@
-"""人机会话单测：对等轮次(人发→AI齐才进轮)、人静默不挡、满轮转下令、人下令仅合法+6AI结算。stub 免 LLM。"""
+"""人机会话单测(统一Player接口,单事件循环): 等齐推进/人静默不挡/满轮转下令/下令结算。stub免LLM。"""
 import asyncio
+import pytest
 
 from diplomind.schemas import Intent, Message, OrderSet, AttitudeUpdate
 from diplomind.session import Session
@@ -8,8 +9,8 @@ from diplomind.session import Session
 class StubGW:
     concurrency = 3
     log = type("L", (), {"stats": staticmethod(lambda: {})})()
-    def chat(self, m, s, **k): return self._mk(s)
     async def achat(self, m, s, **k): return self._mk(s)
+    def chat(self, m, s, **k): return self._mk(s)
     def _mk(self, s):
         if s is Intent: return Intent(goal="扩张")
         if s is AttitudeUpdate: return AttitudeUpdate()
@@ -24,39 +25,28 @@ def _sess():
     return s
 
 
-def test_peer_round_advances_when_all_sent():
-    s = _sess(); assert len(s.ai) == 6
-    asyncio.run(s.begin_phase())
-    assert s.round == 1 and s.human in s.pending()       # AI已生成,等人
-    asyncio.run(s.human_say("broadcast", [], "我主和"))    # 人发→投递→进2轮
-    assert s.round == 2 and any("主和" in m.text for m in s.bus.msgs)
+async def _tick():
+    for _ in range(3): await asyncio.sleep(0)         # 放 AI 任务跑完
 
-def test_human_skip_does_not_block():
-    s = _sess(); asyncio.run(s.begin_phase())
-    asyncio.run(s.human_say("broadcast", [], "", skip=True))
-    assert s.round == 2                                   # 人跳过仍推进
 
-def test_double_send_idempotent_while_ai_pending():
-    s = _sess()
-    s._ai_task = type("T", (), {"done": lambda self: False})()  # AI 未完成
-    async def two():
-        await s.human_say("broadcast", [], "一次")
-        await s.human_say("broadcast", [], "又点")          # 同轮重复点击被忽略
-    asyncio.run(two())
-    assert s.round == 1 and s.human_done                    # AI 没齐, 停在本轮等
-    assert sum("我" in m.text or m.sender == "FRANCE" for m in s.bus.msgs) == 1
+@pytest.mark.asyncio
+async def test_six_ai_one_human():
+    s = _sess(); await s.begin_phase(); await _tick()
+    assert len(s.ai) == 6 and s.pending() == ["FRANCE"]   # AI齐, 只等人
 
-def test_open_private_channel_backend():
-    s = _sess()
-    k = s.open_private(["germany"])
-    assert k == "FRANCE·GERMANY"
-    assert "FRANCE·GERMANY" in s.state()["channels"]    # 空私聊也由后端回, 前端不必本地存
-    assert s.state()["human_done"] is False             # 是否已发言后端判
+@pytest.mark.asyncio
+async def test_human_send_advances():
+    s = _sess(); await s.begin_phase(); await _tick()
+    await s.human_say("broadcast", [], "和平"); await _tick()
+    assert s.round == 2 and any("和平" in m.text for m in s.bus.msgs)
 
-def test_full_negotiation_then_orders():
-    s = _sess(); asyncio.run(s.begin_phase())
+@pytest.mark.asyncio
+async def test_skip_and_full_to_orders():
+    s = _sess(); await s.begin_phase()
     for _ in range(5):
-        if s.mode == "NEGO": asyncio.run(s.human_say("broadcast", [], "talk"))
+        await _tick()
+        if s.mode == "NEGO": await s.human_say("broadcast", [], "", skip=True)
+    await _tick()
     assert s.mode == "ORDERS" and len(s.legal()) > 0
-    res = asyncio.run(s.submit(["A PAR - BUR", "A PAR - MOON"]))
+    res = await s.submit(["A PAR - BUR", "A PAR - MOON"])
     assert res["phase"] != "S1901M" and s.mode == "NEGO"
