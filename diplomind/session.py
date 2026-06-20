@@ -95,5 +95,5 @@ class Session:
     def state(self) -> dict:
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode,
                 "round": self.round, "pending": self.pending(), "centers": self.eng.centers(),
-                "inbox": self.bus.inbox(self.human, self.round) if self.human else "",
+                "inbox": self.bus.inbox(self.human, self.round, include_self=True) if self.human else "",
                 "legal": self.legal() if self.mode == "ORDERS" else []}
