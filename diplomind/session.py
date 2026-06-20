@@ -23,7 +23,7 @@ log = logging.getLogger("diplomind")
 logging.basicConfig(level=logging.DEBUG if os.getenv("DIPLOMIND_DEBUG") else logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 POWERS = ["AUSTRIA", "ENGLAND", "FRANCE", "GERMANY", "ITALY", "RUSSIA", "TURKEY"]
-MAX_ROUNDS = 5
+MAX_ROUNDS = 3
 
 
 class Session:

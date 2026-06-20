@@ -42,10 +42,10 @@ class MessageBus:
             out.setdefault("·".join(members), []).append(f"R{m.rnd} {who}: {m.text}")
         return out
 
-    def inbox(self, power: str, upto_round: int, include_self: bool = False) -> str:
+    def inbox(self, power: str, upto_round: int, include_self: bool = False, recent: int = 2) -> str:
         lines = []
         for m in self.msgs:
-            if m.rnd > upto_round:
+            if m.rnd > upto_round or m.rnd <= upto_round - recent:   # only last `recent` rounds (compact)
                 continue
             who = f"我({power})" if m.sender == power else m.sender
             if m.scope == "broadcast":                       # broadcast visible to all (incl self)

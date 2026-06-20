@@ -9,7 +9,7 @@ from .agent import Agent
 from .bus import MessageBus
 from .engine import OperationEngine
 
-MAX_ROUNDS = 5
+MAX_ROUNDS = 3
 
 
 class Orchestrator:
