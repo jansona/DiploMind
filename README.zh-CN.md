@@ -31,4 +31,4 @@ uv run pytest                                  # 测试
 
 ## 许可
 AGPLv3 —— based on 开源 [`diplomacy`](https://github.com/diplomacy/diplomacy) 引擎(AGPLv3)，
-故全项目同为 AGPLv3。全文见 [LICENSE](LICENSE)。文档见 [docs/](docs/)。
+故全项目同为 AGPLv3。全文见 [LICENSE](LICENSE)。归档开发文档见 [docs/archive/](docs/archive/)。

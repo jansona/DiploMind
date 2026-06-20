@@ -11,3 +11,5 @@ wheels/
 
 # logs / data
 logs/
+save.json
+*.save.json
