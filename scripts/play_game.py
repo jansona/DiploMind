@@ -10,6 +10,7 @@ from diplomind.orchestrator import Orchestrator
 from diplomind.personalities import PERSONAS
 
 PHASES = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+MAXYEAR = int(sys.argv[2]) if len(sys.argv) > 2 else 1910
 ROSTER = ["AUSTRIA", "ENGLAND", "FRANCE", "GERMANY", "ITALY", "RUSSIA", "TURKEY"]
 
 
@@ -17,7 +18,7 @@ async def main():
     gw = Gateway()
     eng = OperationEngine(ROSTER)
     ags = {c: Agent(c, list(PERSONAS.values())[i], gw) for i, c in enumerate(ROSTER)}
-    res = await Orchestrator(eng, ags).run_game(max_phases=PHASES)
+    res = await Orchestrator(eng, ags).run_game(max_phases=PHASES, max_year=MAXYEAR)
     print("结局:", res, "| 中心:", eng.centers())
     print("stats:", gw.log.stats())
 

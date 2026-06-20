@@ -25,4 +25,5 @@ def test_illegal_held_and_save_load():
 def test_neutral_and_endcheck():
     eng = OperationEngine(["FRANCE"])
     assert len(eng.dummy_powers) == 6                 # 1 活 6 中立
-    assert eng.check_end(max_year=1900)["draw"]       # 已过上限 → 平局裁定
+    end = eng.check_end(max_year=1900)
+    assert end["draw"] and end["survivors"]           # 到上限 → 存活玩家和局
