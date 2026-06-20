@@ -53,7 +53,7 @@ class Gateway:
         self.model, self.temperature, self.think = model, temperature, think
         self.constrain = constrain                       # ollama grammar constraint (4b)
         self.api = api                                   # "ollama" native /api/chat, or "openai" compatible
-        self.path = "/api/chat" if api == "ollama" else "/v1/chat/completions"
+        self.path = "/api/chat" if api == "ollama" else "/chat/completions"   # base_url already ends with /v1
         self.log = log or DebugLog()
         hdr = {} if api == "ollama" else {"Authorization": f"Bearer {api_key}"}
         self.sync = httpx.Client(base_url=base_url, trust_env=False, timeout=180, headers=hdr)
