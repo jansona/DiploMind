@@ -96,4 +96,6 @@ class Session:
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode,
                 "round": self.round, "pending": self.pending(), "centers": self.eng.centers(),
                 "inbox": self.bus.inbox(self.human, self.round, include_self=True) if self.human else "",
+                "channels": self.bus.channels(self.human, self.round) if self.human else {},
+                "powers": [p for p in self.eng.active_powers if p != self.human],
                 "legal": self.legal() if self.mode == "ORDERS" else []}
