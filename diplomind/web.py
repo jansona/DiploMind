@@ -99,7 +99,8 @@ chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(
 if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
-bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?'轮到你':(s.human_done?'✓本轮已操作,等其他玩家':'⏳ AI准备中…'));
+bs.disabled=bk.disabled=t.disabled=!s.your_turn;
+S(st,s.your_turn?'可发言':(s.staged?'⏳待投递: '+s.staged:'✓已发/跳过,等其他玩家'));   // 发后进待投递, 全员齐才入聊天
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE'}))}

@@ -35,13 +35,13 @@ async def test_six_ai_one_human():
     assert len(s.ai) == 6 and s.pending() == ["FRANCE"]   # AI齐, 只等人
 
 @pytest.mark.asyncio
-async def test_human_send_idempotent_same_round():
-    s = _sess(); await s.begin_phase(); await _tick()
-    r1 = await s.human_say("broadcast", [], "和平")     # 先发, 立刻再点(未推进)
-    dup = await s.human_say("broadcast", [], "又点")     # 同轮重复 → 拒, 不静默跳轮
-    assert r1["ok"] and dup["ok"] is False
+async def test_human_send_each_round_no_skip():
+    s = _sess(); await s.begin_phase()
+    assert s.your_turn()                                 # 开局即可发, 不等AI
+    assert (await s.human_say("broadcast", [], "和平"))["ok"]
+    assert (await s.human_say("broadcast", [], "又点"))["ok"] is False  # 同轮重复→拒
     await _tick()
-    assert s.round == 2 and any("和平" in m.text for m in s.bus.msgs)
+    assert s.round == 2 and s.your_turn()                # 进2轮又能发, 没被跳
 
 @pytest.mark.asyncio
 async def test_skip_and_full_to_orders():
