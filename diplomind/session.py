@@ -32,7 +32,7 @@ class Session:
         self.human = human; self.max_year = max_year; self.lang = lang
         self.gw = Gateway()
         self.eng = OperationEngine(POWERS)
-        keys = list(PERSONAS); random.shuffle(keys)                     # 默认随机, personas 可指定每国
+        keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
         chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
         self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS}
         self.players = {c: (HumanPlayer(c) if c == human else
@@ -45,27 +45,27 @@ class Session:
 
     async def begin_phase(self) -> None:
         self._cog = False
-        self._start_round()                          # 立即开轮: 人即可发, AI 认知并行(不挡人)
+        self._start_round()                          # start round now: human can act; AI cognition parallel
 
     def ai_players(self):
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
 
     def _start_round(self) -> None:
-        self._done = {}                                  # 本轮各玩家提交的消息(人随时可填, AI后台拟)
+        self._done = {}                                  # per-round submissions
         ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
         for c, p in self.ai.items():
-            asyncio.ensure_future(self._run(c, p, ib[c]))   # AI 各自并行拟言, 不挡人
+            asyncio.ensure_future(self._run(c, p, ib[c]))   # AIs draft in parallel
 
     async def _run(self, c, agent, inbox):
-        if not self._cog: await agent.a_update(self.eng); await agent.a_intent(self.eng)  # 私有认知,与人并行
+        if not self._cog: await agent.a_update(self.eng); await agent.a_intent(self.eng)  # private cognition, parallel to human
         self._done[c] = await agent.a_negotiate(self.eng, inbox)
         await self._maybe_advance()
 
     def pending(self) -> list[str]:
-        return [c for c in self.players if c not in self._done]   # 谁还没发完(含人)
+        return [c for c in self.players if c not in self._done]   # who hasn't acted
 
     async def human_say(self, scope, recipient, content, skip=False) -> dict:
-        if self.mode != "NEGO" or self.human in self._done:        # 本轮已发 → 拒(不静默跳轮)
+        if self.mode != "NEGO" or self.human in self._done:        # already acted -> reject
             return {"ok": False, "reason": "本轮已发言/跳过, 等其他玩家"}
         if not skip and not content.strip():
             return {"ok": False, "reason": "不能发空消息"}
@@ -73,7 +73,7 @@ class Session:
         await self._maybe_advance()
         return {"ok": True}
 
-    def your_turn(self) -> bool:                          # 谈判期且本轮没发, 随时能发(与AI无关)
+    def your_turn(self) -> bool:                          # can speak this round (independent of AI)
         return self.mode == "NEGO" and self.human is not None and self.human not in self._done
 
     async def _maybe_advance(self) -> None:
@@ -84,7 +84,7 @@ class Session:
             if m and m.content.strip():
                 self.bus.post(self.round, c, m.type, m.recipient, m.content)
         log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
-        self.round += 1; self._cog = True            # 认知本相只做一次, 后续轮跳过
+        self.round += 1; self._cog = True            # cognition once per phase
         if self.round > MAX_ROUNDS or self.bus.round_silent(self.round - 1):
             self.mode = "ORDERS"; log.info("转下令")
         else:
@@ -99,17 +99,17 @@ class Session:
     async def submit(self, human_orders) -> dict:
         if self.human:
             self.eng.submit(self.human, [o for o in human_orders if o in self.eng_legal(self.human)])
-        if self.eng.phase_type() == "M":                 # 移动相: AI LLM 下令; 撤退/造兵相: AI 兜底
+        if self.eng.phase_type() == "M":                 # movement: AI LLM orders; retreat/build: AI auto
             ai = self.ai_players()
             outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))
             for p, chosen in zip(ai, outs):
                 self.eng.submit(p.country, chosen)
         else:
-            self.eng.auto_resolve(except_=self.human)    # 撤退/造兵: AI兜底, 人已自选
+            self.eng.auto_resolve(except_=self.human)    # retreat/build: AI auto, human chose
         before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
         nxt = self.eng.process()
-        self._detect_betrayal(before)                # 抢盟友中心=背叛, 入账记仇
-        # 撤退/造兵相: AI 自动, 人有合法令则停下点; 否则继续到下个移动相
+        self._detect_betrayal(before)                # capturing ally center=betrayal
+        # retreat/build: AI auto; stop for human if legal, else next movement
         while self.eng.phase_type() != "M" and not self.eng.is_done():
             if self.human and self.legal():
                 self.mode = "ORDERS"; return {"phase": nxt, "build": True, "end": None}
@@ -124,7 +124,7 @@ class Session:
         return {o for v in self.eng.legal_orders(c).values() for o in v}
 
     def _detect_betrayal(self, before: dict) -> None:
-        """谁抢了谁的中心=攻击; 若攻方曾是受害者盟友(信任>20)→记背叛+信任暴跌(记仇)。"""
+        """center captured=attack; if attacker was ally(trust>20)->betrayal+trust crash."""
         yr = int("".join(filter(str.isdigit, self.eng.phase())) or 0)
         for victim in POWERS:
             lost = before[victim] - set(self.eng.game.powers[victim].centers)
@@ -136,11 +136,11 @@ class Session:
                 ally = vm and vm.relation(taker).trust > 20
                 if vm:
                     vm.record_action(yr, taker, f"夺{cen}", betray=bool(ally))
-                    if ally: vm.apply_attitude({taker: {"trust": -80, "attitude": "叛徒"}})  # 记仇
+                    if ally: vm.apply_attitude({taker: {"trust": -80, "attitude": "叛徒"}})  # hold grudge
 
     SAVE = Path("logs") / "save.json"
 
-    def save(self) -> dict:                              # 存档: 棋盘+编年史+各国记忆
+    def save(self) -> dict:                              # save: board+chronicle+memories
         blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
                 "chronicle": self.chronicle, "persona": self.persona_of,
                 "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
@@ -159,7 +159,7 @@ class Session:
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
                 "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
-                "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # 性格隐藏, 仅debug snapshot可见
+                "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # persona hidden; debug only
                 "phase_type": self.eng.phase_type(), "legal": self.legal() if self.mode == "ORDERS" else []}
 
 

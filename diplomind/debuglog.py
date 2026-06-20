@@ -1,4 +1,4 @@
-"""可观测性 / Debug — 每次 LLM 调用 prompt+响应+耗时+token+重试+格式失败落盘 JSONL，可回放。"""
+"""Observability — append each LLM call (prompt/response/latency/tokens/retries/fmt-fail) to JSONL."""
 from __future__ import annotations
 
 import json

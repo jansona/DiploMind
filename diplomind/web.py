@@ -17,10 +17,10 @@ S: dict = {"game": None}
 
 
 import os
-LANG = os.getenv("DIPLOMIND_LANG", "zh-Hans")     # 开服时配语言: DIPLOMIND_LANG=ja uvicorn ...
+LANG = os.getenv("DIPLOMIND_LANG", "zh-Hans")     # set language at boot: DIPLOMIND_LANG=ja uvicorn ...
 
 @app.on_event("startup")
-async def boot():                                  # 启动即开同一局, 刷新只读, 不重置
+async def boot():                                  # one game from boot; refresh read-only
     S["game"] = Session("FRANCE", lang=LANG)
     asyncio.ensure_future(S["game"].begin_phase())
 
@@ -38,7 +38,7 @@ class OrdReq(BaseModel):
 @app.post("/api/new")
 async def new(r: NewReq):
     S["game"] = Session(r.human, lang=r.lang, personas=r.personas)
-    asyncio.ensure_future(S["game"].begin_phase())     # 后台预热, 前端轮询
+    asyncio.ensure_future(S["game"].begin_phase())     # warm up; frontend polls
     return S["game"].state()
 
 @app.get("/api/state")
@@ -53,7 +53,7 @@ async def say(r: SayReq):
 class PrivReq(BaseModel):
     recipient: list[str] = []
 
-@app.post("/api/open")           # 登记一个私聊频道(后端维护, 前端不本地存)
+@app.post("/api/open")           # register a private channel (backend-owned)
 def open_private(r: PrivReq):
     return {"channel": S["game"].open_private(r.recipient)}
 
@@ -75,27 +75,27 @@ async def load():
 def chron():
     return {"text": book(S["game"].chronicle) if S["game"] else ""}
 
-@app.get("/api/relations")        # 关系图: 各国信任分
+@app.get("/api/relations")        # relations: trust
 def relations():
     g = S["game"]; return {c: {k: v.trust for k, v in a.mem.relations.items()} for c, a in g.ai.items()} if g else {}
 
-@app.get("/api/betrayals")         # 背叛高光
+@app.get("/api/betrayals")         # betrayal highlights
 def betrayals():
     g = S["game"]
     return {"items": [{"who": c, "by": a.actor, "act": a.action, "yr": a.round}
                       for c, ag in (g.ai.items() if g else []) for a in ag.mem.actions if a.betray]}
 
-@app.get("/api/snapshot")          # debug上帝视角: 性格(隐藏)+意图+记忆+暗盘
+@app.get("/api/snapshot")          # debug god view: persona+intent+memory+private
 def snap():
     g = S["game"]
     if not g: return {}
     return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
 
 @app.get("/api/map", response_class=HTMLResponse)
-def gmap():                                          # 复用 diplomacy 引擎渲染真棋盘(省份/中心/单位)
+def gmap():                                          # render real board via diplomacy
     return S["game"].eng.game.render() if S["game"] else "<svg/>"
 
-@app.get("/api/guide")          # 地名简写表 + 命令缩写(规则)表
+@app.get("/api/guide")          # abbrev + order syntax tables
 def guide():
     g = S["game"].eng.game if S["game"] else None
     locs = sorted(g.map.locs) if g else []
@@ -122,8 +122,8 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <h3>编年史</h3><div id=ch></div>
 <h3>内幕(观战/debug)</h3><button onclick=relo()>刷新关系/背叛</button><button onclick=dbg()>看内脏(意图/记忆/暗盘)</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre>
 <script>
-let act='群聊',chans={},mphase='',keys='',legal='';     // 仅这些变了才动DOM, 不碰你的tab/输入/勾选
-function S(el,v){if(el.textContent!=v)el.textContent=v}    // 变了才改, 避免无谓重渲染
+let act='群聊',chans={},mphase='',keys='',legal='';     // only touch DOM on change; keep tab/input/selection
+function S(el,v){if(el.textContent!=v)el.textContent=v}    // update only on change
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
 function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}
 async function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=(await G('/api/open','POST',{recipient:p.split(',').map(x=>x.trim())})).channel}
@@ -134,7 +134,7 @@ if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;
-S(st,s.your_turn?'可发言':(s.staged?'⏳待投递: '+s.staged:'✓已发/跳过,等其他玩家'));   // 发后进待投递, 全员齐才入聊天
+S(st,s.your_turn?'可发言':(s.staged?'⏳待投递: '+s.staged:'✓已发/跳过,等其他玩家'));   // staged until all submit
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE'}))}

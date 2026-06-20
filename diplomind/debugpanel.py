@@ -1,6 +1,6 @@
-"""可观测/Debug 面板 — 聚合各模块 snapshot+LLM日志成一条时间线，按回合/国家/通道筛。
+"""Debug panel: aggregate snapshots + LLM logs into one timeline, filter by round/country/channel.
 
-观战=看戏(对话+指令+地图)；debug=看内脏(意图+记忆+每次调用)。"""
+Spectate = chat+orders+map; debug = intent+memory+every call."""
 from __future__ import annotations
 
 import json
@@ -27,7 +27,7 @@ def messages(bus, country: str | None = None, scope: str | None = None) -> list[
 
 
 def snapshot(agents: dict, bus, eng) -> dict:
-    """全内脏：意图/记忆/性格 + 对话 + 地图。"""
+    """Full internals: intent/memory/persona + chat + map."""
     return {"phase": eng.phase(), "centers": eng.centers(),
             "agents": {c: a.snapshot() for c, a in agents.items()},
             "messages": messages(bus)}

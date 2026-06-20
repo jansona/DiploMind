@@ -1,4 +1,4 @@
-"""AI 玩家 Agent — 五步，独立调用、可单测。demo 跑 感知→意图→谈判→下令。"""
+"""AI agent — 5 async steps: perceive/attitude/intent/negotiate/order."""
 from __future__ import annotations
 
 from .engine import OperationEngine
@@ -14,7 +14,7 @@ class Agent:
         self.mem = Memory(country)
         self.sys = {"role": "system", "content": system_prompt(country, persona, lang)}
 
-    # 1. 感知（不调模型）：棋局+收件+记忆 → 文本
+    # 1. perceive (no model): board+inbox+memory -> text
     def perceive(self, eng: OperationEngine, inbox: str = "") -> str:
         g = eng.game
         units = {p: g.powers[p].units for p in eng.active_powers}
@@ -40,7 +40,7 @@ class Agent:
     def snapshot(self) -> dict:
         return {"country": self.country, "persona": self.persona.name, "mem": self.mem.snapshot()}
 
-    # 五步均异步: AI 全程并发, 无同步版(人类对应步骤在脑中)
+    # all steps async (AI concurrent; humans do these mentally)
     async def a_update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
         prompt = self.perceive(eng, inbox) + '\n据近况评各国信任分。scores 为字典: {"国名": -100到100}。'
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
@@ -64,7 +64,7 @@ class Agent:
         flat = self._legal_flat(eng)
         prompt = self._order_prompt(eng, flat)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
-        chosen = [o for o in (out.orders if out else []) if o in set(flat)]   # 非法剔除=hold
+        chosen = [o for o in (out.orders if out else []) if o in set(flat)]   # drop illegal = hold
         yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
         for o in chosen:
             self.mem.record_action(yr, self.country, o)

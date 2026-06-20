@@ -1,6 +1,6 @@
-"""消息总线 MessageBus — 三态通道(大群/@/私聊)，轮次同步：本轮全发完，轮末统一投递。
+"""MessageBus — group/@/private channels, synchronous rounds: all sent, delivered at round end.
 
-每条带来源标签；为某国打包 inbox。提前结束=某轮全员静默(无消息)。"""
+Each tagged with sender; inbox packed per power. End early if a whole round is silent."""
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -27,7 +27,7 @@ class MessageBus:
         return not any(m.rnd == rnd for m in self.msgs)
 
     def channels(self, power: str, upto_round: int) -> dict[str, list[str]]:
-        """按频道分组该国可见消息：'群聊' + 各私聊国家组合(键=排序成员)。每条带轮次。"""
+        """Group power-visible msgs by channel: broadcast + each private combo (key=sorted members), per round."""
         out: dict[str, list[str]] = {"群聊": []}
         for m in self.msgs:
             if m.rnd > upto_round:
@@ -38,7 +38,7 @@ class MessageBus:
                 continue
             members = sorted({m.sender, *m.to})
             if power not in members:
-                continue                                    # 与我无关的私聊不可见
+                continue                                    # private not involving me hidden
             out.setdefault("·".join(members), []).append(f"R{m.rnd} {who}: {m.text}")
         return out
 
@@ -48,10 +48,10 @@ class MessageBus:
             if m.rnd > upto_round:
                 continue
             who = f"我({power})" if m.sender == power else m.sender
-            if m.scope == "broadcast":                       # 群聊全员可见(含自己)
+            if m.scope == "broadcast":                       # broadcast visible to all (incl self)
                 lines.append(f"R{m.rnd} {who}·群发: {m.text}")
-            elif m.sender == power and include_self:          # 自己发的私聊
+            elif m.sender == power and include_self:          # own private
                 lines.append(f"R{m.rnd} 我({power})·私聊@{','.join(m.to)}: {m.text}")
-            elif power in m.to:                               # 发给我的私聊
+            elif power in m.to:                               # private to me
                 lines.append(f"R{m.rnd} {who}·私聊@你: {m.text}")
         return "\n".join(lines)

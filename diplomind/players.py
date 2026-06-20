@@ -1,5 +1,5 @@
-"""玩家统一抽象 — 人/AI 对等：同流程、同动作接口(发言/下令)，仅输入源不同。
-AI 内部认知(态度/意图/记忆)是 AIPlayer 私有, 不属核心框架。人类计时以后再加。"""
+"""Unified player abstraction: human/AI are peers, same flow and action interface (speak/order); only input differs.
+AI cognition (attitude/intent/memory) is private to AIPlayer."""
 from __future__ import annotations
 
 import asyncio
@@ -16,7 +16,7 @@ class Player:
 
 
 class AIPlayer(Player):
-    """输入源=LLM(需引导输出); 认知态度/意图为私有步骤。"""
+    """Input = LLM; attitude/intent are private steps."""
     def __init__(self, agent: Agent) -> None:
         self.agent, self.country = agent, agent.country
 
@@ -31,7 +31,7 @@ class AIPlayer(Player):
 
 
 class HumanPlayer(Player):
-    """输入源=前端: act 阻塞在 future, 由 web 提交/跳过 resolve。"""
+    """Input = frontend: act blocks on a future, resolved by web submit/skip."""
     def __init__(self, country: str) -> None:
         self.country = country
         self._msg: asyncio.Future | None = None

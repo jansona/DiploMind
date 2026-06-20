@@ -1,6 +1,6 @@
-"""编排器 Orchestrator — 一回合闭环：意图→谈判(≤5轮,全员静默提前止)→下令→结算。
+"""Orchestrator — one round: intent->negotiate(<=5)->orders->process.
 
-七国并发：每轮 asyncio.gather，各国基于上一轮快照同时写，轮末统一投递。"""
+7 powers concurrent per round via asyncio.gather; deliver at round end."""
 from __future__ import annotations
 
 import asyncio
@@ -17,7 +17,7 @@ class Orchestrator:
         self.eng, self.agents, self.bus = eng, agents, MessageBus()
 
     async def negotiate(self) -> int:
-        await asyncio.gather(*(a.a_update(self.eng) for a in self.agents.values()))   # 先评态度
+        await asyncio.gather(*(a.a_update(self.eng) for a in self.agents.values()))   # attitude first
         await asyncio.gather(*(a.a_intent(self.eng) for a in self.agents.values()))
         for rnd in range(1, MAX_ROUNDS + 1):
             inboxes = {c: self.bus.inbox(c, rnd - 1) for c in self.agents}
@@ -25,7 +25,7 @@ class Orchestrator:
             for c, m in zip(self.agents, msgs):
                 if m:
                     self.bus.post(rnd, c, m.type, m.recipient, m.content)
-            if self.bus.round_silent(rnd):   # 全员静默 → 提前止
+            if self.bus.round_silent(rnd):   # all silent -> stop early
                 return rnd
         return MAX_ROUNDS
 
@@ -41,13 +41,13 @@ class Orchestrator:
     async def run_round(self) -> dict:
         stop = await self.negotiate()
         out = await self.collect_and_process()
-        for a in self.agents.values():           # 回合末承诺倒计时
+        for a in self.agents.values():           # end-of-round commitment tick
             a.mem.tick()
         out["nego_rounds"] = stop
         return out
 
     async def run_phase(self) -> dict:
-        """移动相=完整谈判+下令；撤退/造兵相=引擎兜底自动结算。"""
+        """Movement=full negotiate+orders; retreat/build=engine auto."""
         if self.eng.phase_type() == "M":
             self.bus = MessageBus()
             return await self.run_round()
