@@ -34,11 +34,11 @@ class Session:
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
         self.chronicle: list[str] = []; self._opened: set[str] = set()
-        self._done: dict[str, object] = {}; self._committed: set[int] = set()
+        self._done: dict[str, object] = {}; self._committed: set[int] = set(); self._cog = False
 
     async def begin_phase(self) -> None:
-        await asyncio.gather(*(p.cognition(self.eng) for p in self.ai_players()))  # AI 私有认知
-        self._start_round()
+        self._cog = False
+        self._start_round()                          # 立即开轮: 人即可发, AI 认知并行(不挡人)
 
     def ai_players(self):
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
@@ -50,7 +50,9 @@ class Session:
             asyncio.ensure_future(self._run(c, p, ib[c]))   # 每个玩家(人/AI)同样 await act
 
     async def _run(self, c, p, inbox):
-        self._done[c] = await p.negotiate(self.eng, inbox)  # AI 即返, 人阻塞到前端提交
+        if isinstance(p, AIPlayer) and not self._cog:       # AI 私有认知: 本相首轮做一次, 与人并行
+            await p.cognition(self.eng)
+        self._done[c] = await p.negotiate(self.eng, inbox)  # AI 思考中, 人同时可发, 互不等
         await self._maybe_advance()
 
     def pending(self) -> list[str]:
@@ -77,7 +79,7 @@ class Session:
             if m and m.content.strip():
                 self.bus.post(self.round, c, m.type, m.recipient, m.content)
         log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
-        self.round += 1
+        self.round += 1; self._cog = True            # 认知本相只做一次, 后续轮跳过
         if self.round > MAX_ROUNDS or self.bus.round_silent(self.round - 1):
             self.mode = "ORDERS"; log.info("转下令")
         else:
