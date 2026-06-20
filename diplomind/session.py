@@ -44,32 +44,30 @@ class Session:
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
 
     def _start_round(self) -> None:
-        self._done = {}
-        ib = {c: self.bus.inbox(c, self.round - 1) for c in self.players}
-        for c, p in self.players.items():
-            asyncio.ensure_future(self._run(c, p, ib[c]))   # 每个玩家(人/AI)同样 await act
+        self._done = {}                                  # 本轮各玩家提交的消息(人随时可填, AI后台拟)
+        ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
+        for c, p in self.ai.items():
+            asyncio.ensure_future(self._run(c, p, ib[c]))   # AI 各自并行拟言, 不挡人
 
-    async def _run(self, c, p, inbox):
-        if isinstance(p, AIPlayer) and not self._cog:       # AI 私有认知: 本相首轮做一次, 与人并行
-            await p.cognition(self.eng)
-        self._done[c] = await p.negotiate(self.eng, inbox)  # AI 思考中, 人同时可发, 互不等
+    async def _run(self, c, agent, inbox):
+        if not self._cog: await agent.a_update(self.eng); await agent.a_intent(self.eng)  # 私有认知,与人并行
+        self._done[c] = await agent.a_negotiate(self.eng, inbox)
         await self._maybe_advance()
 
     def pending(self) -> list[str]:
-        return [c for c in self.players if c not in self._done]
+        return [c for c in self.players if c not in self._done]   # 谁还没发完(含人)
 
     async def human_say(self, scope, recipient, content, skip=False) -> dict:
-        p = self.players.get(self.human)
-        if self.mode != "NEGO" or not p._msg or p._msg.done():     # 没轮到/本轮已操作 → 拒
-            return {"ok": False, "reason": "还没轮到你/本轮已操作"}
-        if not skip and not content.strip():                       # 空消息不发
+        if self.mode != "NEGO" or self.human in self._done:        # 本轮已发 → 拒(不静默跳轮)
+            return {"ok": False, "reason": "本轮已发言/跳过, 等其他玩家"}
+        if not skip and not content.strip():
             return {"ok": False, "reason": "不能发空消息"}
-        self.players[self.human].submit_msg(None if skip else Message(type=scope, recipient=recipient, content=content))
+        self._done[self.human] = None if skip else Message(type=scope, recipient=recipient, content=content)
+        await self._maybe_advance()
         return {"ok": True}
 
-    def your_turn(self) -> bool:
-        p = self.players.get(self.human)
-        return bool(self.mode == "NEGO" and p and getattr(p, "_msg", None) and not p._msg.done())
+    def your_turn(self) -> bool:                          # 谈判期且本轮没发, 随时能发(与AI无关)
+        return self.mode == "NEGO" and self.human is not None and self.human not in self._done
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:
@@ -114,7 +112,8 @@ class Session:
         chans = self.bus.channels(self.human, self.round) if self.human else {}
         for k in self._opened: chans.setdefault(k, [])
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
-                "pending": self.pending(), "human_done": self.human not in self.pending(), "your_turn": self.your_turn(),
+                "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
+                "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
                 "centers": self.eng.centers(), "channels": chans,
                 "legal": self.legal() if self.mode == "ORDERS" else []}
 
