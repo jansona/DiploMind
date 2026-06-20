@@ -91,9 +91,19 @@ def snap():
     if not g: return {}
     return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
 
+import re as _re
+from pathlib import Path as _P
+_LABELS = ""                                         # diplomacy render drops province names; re-inject BriefLabelLayer
+for _p in _P(__import__("diplomacy").__file__).parent.glob("maps/svg/standard.svg"):
+    _m = _re.search(r'<g[^>]*id="BriefLabelLayer".*?</g>', _p.read_text(), _re.S)
+    _LABELS = _m.group(0) if _m else ""
+
 @app.get("/api/map", response_class=HTMLResponse)
-def gmap():                                          # render real board via diplomacy
-    return S["game"].eng.game.render() if S["game"] else "<svg/>"
+def gmap():                                          # render real board + province name labels
+    if not S["game"]:
+        return "<svg/>"
+    svg = S["game"].eng.game.render()
+    return svg.replace("</svg>", _LABELS + "</svg>") if _LABELS else svg
 
 @app.get("/api/guide")          # abbrev + order syntax tables
 def guide():
