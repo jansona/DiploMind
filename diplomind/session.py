@@ -35,6 +35,7 @@ class Session:
         self.human_done = human is None
         self._silent_streak = 0
         self._committed: set[int] = set()         # 已结算轮次, 防重复推进
+        self._opened: set[str] = set()            # 人手动开过的私聊频道(空也保留)
 
     async def begin_phase(self) -> None:
         await asyncio.gather(*(a.a_update(self.eng) for a in self.ai.values()))
@@ -77,6 +78,11 @@ class Session:
         else:
             self._start_ai_round()
 
+    def open_private(self, recipients: list[str]) -> str:
+        key = "·".join(sorted({self.human, *[r.upper() for r in recipients]}))
+        self._opened.add(key)
+        return key
+
     def legal(self) -> list[str]:
         return sorted({o for v in self.eng.legal_orders(self.human).values() for o in v}) if self.human else []
 
@@ -97,9 +103,11 @@ class Session:
         return {"phase": nxt, "end": self.eng.check_end()}
 
     def state(self) -> dict:
+        chans = self.bus.channels(self.human, self.round) if self.human else {}
+        for k in self._opened:                       # 人开过的空私聊也回, 前端不必本地存
+            chans.setdefault(k, [])
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode,
-                "round": self.round, "pending": self.pending(), "centers": self.eng.centers(),
-                "inbox": self.bus.inbox(self.human, self.round, include_self=True) if self.human else "",
-                "channels": self.bus.channels(self.human, self.round) if self.human else {},
+                "round": self.round, "pending": self.pending(), "human_done": self.human_done,
+                "centers": self.eng.centers(), "channels": chans,
                 "powers": [p for p in self.eng.active_powers if p != self.human],
                 "legal": self.legal() if self.mode == "ORDERS" else []}
