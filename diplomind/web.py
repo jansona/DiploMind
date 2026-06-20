@@ -88,13 +88,16 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
 <script>
-let act='群聊',chans={},last='';   // 前端只存"当前看哪个tab"; 频道/是否已发言全来自后端
+let act='群聊',chans={},last='',last_keys='';   // 前端只存"当前看哪个tab"; 频道/已发言全来自后端
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
-function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)'}
+function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';
+[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}   // 高亮当前tab,不重建
 async function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=(await G('/api/open','POST',{recipient:p.split(',').map(x=>x.trim())})).channel}
 function R(s){let H=s.human;ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=H||'观战';
 c.textContent=Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' ');pd.textContent=(s.pending||[]).join(',')||'—';
-chans=s.channels||{};if(!chans[act])act='群聊';tabs.innerHTML=Object.keys(chans).map(k=>'<button class='+(k==act?'on':'')+' onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('');pick(act);
+chans=s.channels||{};if(!chans[act])act='群聊';let keys=Object.keys(chans).join(',');
+if(keys!=last_keys){last_keys=keys;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
+pick(act);  // 只在频道增减时重建tab, 否则保留点击
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 bs.disabled=bk.disabled=t.disabled=!!s.human_done;st.textContent=s.human_done?'✓本轮已操作,等其他玩家':'';
 os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');
