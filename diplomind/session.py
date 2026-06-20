@@ -7,8 +7,14 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 
 from .agent import Agent
+
+log = logging.getLogger("diplomind")
+logging.basicConfig(level=logging.DEBUG if os.getenv("DIPLOMIND_DEBUG") else logging.INFO,
+                    format="%(asctime)s %(levelname)s %(message)s")
 from .bus import MessageBus
 from .chronicle import generate
 from .engine import OperationEngine
@@ -46,10 +52,12 @@ class Session:
         self._ai_msgs, self.human_done = {}, self.human is None
         ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
         self._ai_task = asyncio.ensure_future(self._gen(ib))
+        log.debug("R%d start: AI 拟言中, human_done=%s", self.round, self.human_done)
 
     async def _gen(self, ib) -> None:
         outs = await asyncio.gather(*(a.a_negotiate(self.eng, ib[c]) for c, a in self.ai.items()))
         self._ai_msgs = {c: m for c, m in zip(self.ai, outs)}
+        log.debug("R%d AI 拟言完成, pending=%s", self.round, self.pending())
         await self._maybe_advance()                # AI 跑完也来判一次, 否则人先发会卡死
 
     def pending(self) -> list[str]:
@@ -58,23 +66,25 @@ class Session:
 
     async def human_say(self, scope: str, recipient: list[str], content: str, skip: bool = False) -> None:
         if self.human_done:                        # 本轮已操作, 重复发送幂等忽略
-            return
+            log.debug("R%d 人重复操作被忽略", self.round); return
         if self.human and not skip and content.strip():
             self.bus.post(self.round, self.human, scope, recipient, content)
         self.human_done = True
+        log.debug("R%d 人%s, pending=%s", self.round, "跳过" if skip else "发言", self.pending())
         await self._maybe_advance()
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:   # 没齐 / 已结算 → 不重复推进
             return
         self._committed.add(self.round)
+        log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
         for c, m in self._ai_msgs.items():         # AI 本轮投递
             if m:
                 self.bus.post(self.round, c, m.type, m.recipient, m.content)
         self._silent_streak = self._silent_streak + 1 if self.bus.round_silent(self.round) else 0
         self.round += 1
         if self.round > MAX_ROUNDS or self._silent_streak >= 1:
-            self.mode = "ORDERS"
+            self.mode = "ORDERS"; log.info("转下令 (满%d轮/静默)", MAX_ROUNDS)
         else:
             self._start_ai_round()
 
@@ -96,6 +106,7 @@ class Session:
         nxt = self.eng.process()
         while self.eng.phase_type() != "M" and not self.eng.is_done():
             self.eng.auto_resolve(); nxt = self.eng.process()
+        log.info("结算 -> %s, 中心=%s", nxt, self.eng.centers())
         self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._silent_streak = 0; self._committed = set()
         for a in self.ai.values():
