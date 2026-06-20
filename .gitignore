@@ -13,3 +13,8 @@ wheels/
 logs/
 save.json
 *.save.json
+
+# private configs (keep example/ollama)
+conf/*
+!conf/example.json
+!conf/ollama.json
