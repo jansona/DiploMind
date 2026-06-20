@@ -36,6 +36,16 @@ def test_human_skip_does_not_block():
     asyncio.run(s.human_say("broadcast", [], "", skip=True))
     assert s.round == 2                                   # 人跳过仍推进
 
+def test_double_send_idempotent_while_ai_pending():
+    s = _sess()
+    s._ai_task = type("T", (), {"done": lambda self: False})()  # AI 未完成
+    async def two():
+        await s.human_say("broadcast", [], "一次")
+        await s.human_say("broadcast", [], "又点")          # 同轮重复点击被忽略
+    asyncio.run(two())
+    assert s.round == 1 and s.human_done                    # AI 没齐, 停在本轮等
+    assert sum("我" in m.text or m.sender == "FRANCE" for m in s.bus.msgs) == 1
+
 def test_full_negotiation_then_orders():
     s = _sess(); asyncio.run(s.begin_phase())
     for _ in range(5):
