@@ -40,4 +40,5 @@ uv run pytest                                  # tests
 AGPLv3 — based on the open-source [`diplomacy`](https://github.com/diplomacy/diplomacy)
 engine (AGPLv3), so DiploMind is AGPLv3 too. Full text in [LICENSE](LICENSE).
 
-Docs: see [docs/](docs/) for product, architecture, personas, and DEMO results.
+Docs: archived dev notes (product, architecture, personas, DEMO results) in
+[docs/archive/](docs/archive/); `docs/` is reserved for future formal docs.

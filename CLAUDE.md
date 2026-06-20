@@ -33,4 +33,4 @@ DIPLOMIND_MODEL=qwen3.5:2b DIPLOMIND_LANG=en uv run uvicorn diplomind.web:app
 ```
 
 ## 文档
-[docs/](docs/)：产品定义、技术架构、AI性格风格、RESULTS（验证数据）、DEMO验证清单。
+归档开发文档见 [docs/archive/](docs/archive/)：产品定义、技术架构、AI性格风格、RESULTS（验证数据）、DEMO验证清单、DECISIONS。docs/ 留作后续正式文档。
