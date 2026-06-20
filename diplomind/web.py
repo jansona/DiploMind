@@ -100,7 +100,8 @@ bs.disabled=bk.disabled=t.disabled=!!s.human_done;st.textContent=s.human_done?'�
 os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');
 if(s.phase!=last){last=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x)}}
 async function nw(){act='群聊';R(await G('/api/new','POST',{human:'FRANCE'}))}
-async function say(sk){let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
-await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});t.value=''}
+async function say(sk){bs.disabled=bk.disabled=t.disabled=true;st.textContent='✓本轮已操作,等其他玩家';  // 即时锁,堵2s空窗双发
+let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
+R(await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk}));t.value=''}
 async function sub(){let o=[...os.selectedOptions].map(x=>x.value);await G('/api/orders','POST',{orders:o});ch.textContent=(await G('/api/chronicle')).text}
 setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
