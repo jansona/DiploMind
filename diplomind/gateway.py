@@ -49,8 +49,10 @@ def _extract(txt: str) -> str:
 
 class Gateway:
     def __init__(self, model: str = DEFAULT_MODEL, log: DebugLog | None = None,
-                 temperature: float = 0.7, think: bool = False, concurrency: int = 3) -> None:
+                 temperature: float = 0.7, think: bool = False, concurrency: int = 3,
+                 constrain: bool = True) -> None:
         self.model, self.temperature, self.think = model, temperature, think
+        self.constrain = constrain                       # 重开 ollama format 语法硬约束(4b)
         self.log = log or DebugLog()
         self.sync = httpx.Client(base_url=BASE_URL, trust_env=False, timeout=180)
         self.aclient = httpx.AsyncClient(base_url=BASE_URL, trust_env=False, timeout=180)
@@ -67,8 +69,15 @@ class Gateway:
         return [{**m, "content": m["content"] + spec} if m["role"] == "system" else m for m in messages]
 
     def _body(self, messages, schema, temp=None):
-        return {"model": self.model, "messages": self._msgs(messages, schema), "stream": False,
-                "think": self.think, "options": {"temperature": self.temperature if temp is None else temp}}
+        b = {"model": self.model, "messages": self._msgs(messages, schema), "stream": False,
+             "think": self.think, "options": {"temperature": self.temperature if temp is None else temp}}
+        if self.constrain:                               # 语法硬约束：解码只能产出合法 schema
+            b["format"] = schema.model_json_schema()
+        return b
+
+    @staticmethod
+    def _retry_hint(messages, txt):                      # 失败把报错喂回去重试
+        return messages + [{"role": "user", "content": f"上次输出无法解析为目标JSON：{txt[:120]}。只输出合法JSON，别加任何解释。"}]
 
     def _validate(self, data, schema, ms, tag, attempt, fails):
         txt = data.get("message", {}).get("content", "")
@@ -84,22 +93,24 @@ class Gateway:
             return None, fails + 1
 
     def chat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
-        fails = 0
+        msgs, fails = messages, 0
         for attempt in range(retry + 1):
             t0 = time.time()
-            r = self.sync.post("/api/chat", json=self._body(messages, schema, temp))
-            obj, fails = self._validate(r.json(), schema, round((time.time() - t0) * 1000), tag, attempt, fails)
+            data = self.sync.post("/api/chat", json=self._body(msgs, schema, temp)).json()
+            obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
             if obj is not None:
                 return obj
+            msgs = self._retry_hint(messages, data.get("message", {}).get("content", ""))
         return None
 
     async def achat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
         async with self._gate():                        # 整次调用(含重试)占一个名额
-            fails = 0
+            msgs, fails = messages, 0
             for attempt in range(retry + 1):
                 t0 = time.time()
-                r = await self.aclient.post("/api/chat", json=self._body(messages, schema, temp))
-                obj, fails = self._validate(r.json(), schema, round((time.time() - t0) * 1000), tag, attempt, fails)
+                data = (await self.aclient.post("/api/chat", json=self._body(msgs, schema, temp))).json()
+                obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
                 if obj is not None:
                     return obj
+                msgs = self._retry_hint(messages, data.get("message", {}).get("content", ""))
             return None

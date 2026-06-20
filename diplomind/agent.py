@@ -47,7 +47,7 @@ class Agent:
     # 4. 谈判（每轮调模型）：死模板+精简字段+宽松解析+重试1次，仍坏=空轮
     def negotiate(self, eng: OperationEngine, inbox: str) -> Message | None:
         ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n" + self.NEGO_TPL
-        return self.gw.chat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1)
+        return self.gw.chat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1, temp=0.4)
 
     def _legal_flat(self, eng: OperationEngine) -> list[str]:
         legal = eng.legal_orders(self.country)
@@ -89,7 +89,7 @@ class Agent:
 
     async def a_negotiate(self, eng: OperationEngine, inbox: str) -> Message | None:
         ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n" + self.NEGO_TPL
-        return await self.gw.achat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1)
+        return await self.gw.achat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1, temp=0.4)
 
     async def a_decide_orders(self, eng: OperationEngine) -> tuple[OrderSet | None, list[str]]:
         flat = self._legal_flat(eng)
