@@ -11,6 +11,12 @@
 - AI 始终为自己赢，不放水；难度只由模型档位决定。
 - 谈判=轮次同步非实时，每国每轮一条，全员静默或满 5 轮转下令。
 
+## Commit 规范
+- **commit message 一律英文**，遵循 Conventional Commits：`type(scope): summary`。
+- type：`feat` 新功能、`fix` 修 bug、`refactor` 重构、`test` 测试、`docs` 文档、`chore` 杂项、`perf` 性能。
+- 例：`feat(gateway): support OpenAI-compatible APIs`、`fix(session): order phase no longer 500s on LLM timeout`。
+- 一句话祈使现在时、简洁；正文(可选)说为什么；结尾保留 Co-Authored-By。
+
 ## 技术栈
 - 后端 Python 3.11 / uv；复用 `diplomacy` 引擎；FastAPI Web。
 - LLM 走本地 ollama 原生 `/api/chat`（默认 qwen3.5:4b）：`think:false`、format 语法约束、宽松 JSON 解析、并发闸 3、num_predict 截尾。勿用 `/v1`（不认 think，慢 35×）。
