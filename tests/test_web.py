@@ -1,13 +1,12 @@
-"""P9 web 后端单测：端点起得来(不触 LLM 的只读)。"""
+"""P9 web 后端单测：启动即开同一局, 刷新只读不重置。"""
 from fastapi.testclient import TestClient
 
 from diplomind.web import app
 
-c = TestClient(app)
 
-
-def test_index_and_empty_state():
-    assert "DiploMind" in c.get("/").text
-    assert c.get("/api/state").json()["mode"] == "NEW"     # 无局
-    assert c.get("/api/chronicle").json()["text"] == ""
-    assert c.get("/api/map").text == "<svg/>"              # 无局给空棋盘
+def test_persistent_game_on_boot():
+    with TestClient(app) as c:                       # 触发 startup 建局
+        assert "DiploMind" in c.get("/").text
+        assert c.get("/api/state").json()["mode"] in ("NEGO", "ORDERS")
+        assert c.get("/api/state").json()["human"] == "FRANCE"     # 同一局, 只读
+        assert len(c.get("/api/map").text) > 1000                  # 真棋盘已就绪

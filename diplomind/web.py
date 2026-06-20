@@ -16,6 +16,12 @@ app = FastAPI(title="DiploMind")
 S: dict = {"game": None}
 
 
+@app.on_event("startup")
+async def boot():                                  # 启动即开同一局, 刷新只读, 不重置
+    S["game"] = Session("FRANCE")
+    asyncio.ensure_future(S["game"].begin_phase())
+
+
 class NewReq(BaseModel):
     human: str | None = "FRANCE"
 
@@ -66,7 +72,7 @@ def index():
 
 INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}</style>
-<h2>DiploMind — 你 <b id=h>FRANCE</b></h2><button onclick=nw()>新局</button>
+<h2>DiploMind — 你 <b id=h>FRANCE</b></h2><button onclick="if(confirm('重开新局?'))nw()">新局</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
 <h3>中心</h3><div id=c></div>
@@ -94,4 +100,4 @@ async function say(sk){acted=sk?'跳过':'发言';st.textContent='✓本轮已'+
 let scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});t.value=''}
 async function sub(){let o=[...os.selectedOptions].map(x=>x.value);await G('/api/orders','POST',{orders:o});ch.textContent=(await G('/api/chronicle')).text}
-setInterval(async()=>{R(await G('/api/state'))},2000);nw()</script>"""
+setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
