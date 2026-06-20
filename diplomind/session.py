@@ -101,9 +101,11 @@ class Session:
         outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))   # AI 走同一 decide 接口
         for p, chosen in zip(ai, outs):
             self.eng.submit(p.country, chosen)
+        before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
         nxt = self.eng.process()
         while self.eng.phase_type() != "M" and not self.eng.is_done():
             self.eng.auto_resolve(); nxt = self.eng.process()
+        self._detect_betrayal(before)                # 抢盟友中心=背叛, 入账记仇
         log.info("结算 -> %s", nxt)
         self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()
@@ -112,6 +114,21 @@ class Session:
 
     def eng_legal(self, c):
         return {o for v in self.eng.legal_orders(c).values() for o in v}
+
+    def _detect_betrayal(self, before: dict) -> None:
+        """谁抢了谁的中心=攻击; 若攻方曾是受害者盟友(信任>20)→记背叛+信任暴跌(记仇)。"""
+        yr = int("".join(filter(str.isdigit, self.eng.phase())) or 0)
+        for victim in POWERS:
+            lost = before[victim] - set(self.eng.game.powers[victim].centers)
+            for cen in lost:
+                taker = next((c for c in POWERS if cen in self.eng.game.powers[c].centers), None)
+                if not taker or taker == victim or taker not in self.ai:
+                    continue
+                vm = self.ai[victim].mem if victim in self.ai else None
+                ally = vm and vm.relation(taker).trust > 20
+                if vm:
+                    vm.record_action(yr, taker, f"夺{cen}", betray=bool(ally))
+                    if ally: vm.apply_attitude({taker: {"trust": -80, "attitude": "叛徒"}})  # 记仇
 
     SAVE = Path("logs") / "save.json"
 
