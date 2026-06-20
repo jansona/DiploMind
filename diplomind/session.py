@@ -24,8 +24,8 @@ MAX_ROUNDS = 5
 
 
 class Session:
-    def __init__(self, human: str | None = "FRANCE") -> None:
-        self.human = human
+    def __init__(self, human: str | None = "FRANCE", max_year: int = 1910) -> None:
+        self.human = human; self.max_year = max_year   # 到此年所有存活玩家和局
         self.gw = Gateway()
         self.eng = OperationEngine(POWERS)
         self.players = {c: (HumanPlayer(c) if c == human else
@@ -103,7 +103,7 @@ class Session:
         self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()
         for a in self.ai.values(): a.mem.tick()
-        return {"phase": nxt, "end": self.eng.check_end()}
+        return {"phase": nxt, "end": self.eng.check_end(self.max_year)}
 
     def eng_legal(self, c):
         return {o for v in self.eng.legal_orders(c).values() for o in v}

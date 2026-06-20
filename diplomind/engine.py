@@ -71,12 +71,12 @@ class OperationEngine:
 
     def check_end(self, max_year: int = 1910) -> dict | None:
         for p, n in self.centers().items():
-            if n >= 18:
+            if n >= 18:                                   # 18中心独霸=胜
                 return {"winner": p, "centers": n}
         yr = int("".join(filter(str.isdigit, self.phase())) or 0)
-        if yr >= max_year:
-            top = max(self.centers().items(), key=lambda kv: kv[1])
-            return {"draw": True, "leader": top[0], "centers": top[1]}
+        if yr >= max_year:                                # 到最大回合: 所有存活玩家(>0中心)和局
+            survivors = sorted([p for p, n in self.centers().items() if n > 0])
+            return {"draw": True, "survivors": survivors, "centers": self.centers()}
         return None
 
     def process(self) -> str:
