@@ -22,3 +22,13 @@ def test_max_three_in_flight():
         await asyncio.gather(*(gw.achat([{"role": "u", "content": "hi"}], Intent) for _ in range(7)))
     asyncio.run(run())
     assert peak <= 3            # 7 国并发, 峰值不超 3
+
+
+def test_chat_survives_timeout():
+    import httpx
+    from diplomind.gateway import Gateway
+    from diplomind.schemas import Intent
+    gw = Gateway()
+    def boom(*a, **k): raise httpx.ReadTimeout("slow")
+    gw.sync.post = boom
+    assert gw.chat([{"role": "system", "content": "x"}], Intent) is None   # 超时不崩, 返None=hold
