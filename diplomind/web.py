@@ -143,7 +143,7 @@ nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'
 S(md,s.mode=='ORDERS'?'下令阶段·待下令: '+(s.order_pending||[]).join(',')||'下令阶段':s.mode);
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;
 S(st,s.your_turn?'可发言':(s.staged?'⏳待投递: '+s.staged:'✓已发/跳过,等其他玩家'));   // staged until all submit
-let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
+let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');sent=false;os.disabled=false;ord.querySelector('button').disabled=false}  // new orders phase unlocks
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{}))}   // human/lang from config
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令缩写:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名(简写=全名/中文):\\n'+d.locs.join('\\n')}
@@ -152,8 +152,8 @@ bs.disabled=bk.disabled=t.disabled=true;st.textContent='发送中…';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});
 if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
-async function sub(){let btn=event.target;btn.disabled=true;st.textContent='⏳ 命令已交,结算中…';
-await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)});btn.disabled=false}
+let sent=false;async function sub(){let btn=event.target;btn.disabled=os.disabled=sent=true;st.textContent='⏳ 命令已交,结算中…';
+await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}   // 锁到下一相
 async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→{'+Object.entries(v).map(([a,t])=>a+':'+t).join(' ')+'}').join('  ');
 let b=await G('/api/betrayals');bet.innerHTML='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act+'('+x.yr+')').join(' | ')||'暂无')}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}   // god view: intent/memory/all incl AI-AI private
