@@ -9,10 +9,10 @@ from .schemas import AttitudeUpdate, Intent, Message, OrderSet
 
 
 class Agent:
-    def __init__(self, country: str, persona: Persona, gw: Gateway) -> None:
+    def __init__(self, country: str, persona: Persona, gw: Gateway, lang: str = "zh-Hans") -> None:
         self.country, self.persona, self.gw = country, persona, gw
         self.mem = Memory(country)
-        self.sys = {"role": "system", "content": system_prompt(country, persona)}
+        self.sys = {"role": "system", "content": system_prompt(country, persona, lang)}
 
     # 1. 感知（不调模型）：棋局+收件+记忆 → 文本
     def perceive(self, eng: OperationEngine, inbox: str = "") -> str:

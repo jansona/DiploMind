@@ -71,8 +71,8 @@ class Gateway:
         return [{**m, "content": m["content"] + spec} if m["role"] == "system" else m for m in messages]
 
     def _body(self, messages, schema, temp=None):
-        b = {"model": self.model, "messages": self._msgs(messages, schema), "stream": False,
-             "think": self.think, "options": {"temperature": self.temperature if temp is None else temp}}
+        b = {"model": self.model, "messages": self._msgs(messages, schema), "stream": False, "think": self.think,
+             "options": {"temperature": self.temperature if temp is None else temp, "num_predict": 320}}  # 截输出, 压尾延迟
         if self.constrain:                               # 语法硬约束：解码只能产出合法 schema
             b["format"] = schema.model_json_schema()
         return b

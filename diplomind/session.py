@@ -27,15 +27,17 @@ MAX_ROUNDS = 5
 
 
 class Session:
-    def __init__(self, human: str | None = "FRANCE", max_year: int = 1910) -> None:
-        self.human = human; self.max_year = max_year   # 到此年所有存活玩家和局
+    def __init__(self, human: str | None = "FRANCE", max_year: int = 1910,
+                 lang: str = "zh-Hans", personas: dict | None = None) -> None:
+        self.human = human; self.max_year = max_year; self.lang = lang
         self.gw = Gateway()
         self.eng = OperationEngine(POWERS)
-        styles = list(PERSONAS.values()); random.shuffle(styles)        # 性格随机分配, 每局不同
-        self.persona_of = {c: styles[i].name for i, c in enumerate(POWERS)}
+        keys = list(PERSONAS); random.shuffle(keys)                     # 默认随机, personas 可指定每国
+        chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
+        self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS}
         self.players = {c: (HumanPlayer(c) if c == human else
-                            AIPlayer(Agent(c, styles[i], self.gw)))
-                        for i, c in enumerate(POWERS)}
+                            AIPlayer(Agent(c, PERSONAS[chosen[c]], self.gw, lang)))
+                        for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
         self.chronicle: list[str] = []; self._opened: set[str] = set()
@@ -139,7 +141,7 @@ class Session:
     SAVE = Path("logs") / "save.json"
 
     def save(self) -> dict:                              # 存档: 棋盘+编年史+各国记忆
-        blob = {"human": self.human, "max_year": self.max_year, "board": self.eng.save(),
+        blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
                 "chronicle": self.chronicle, "persona": self.persona_of,
                 "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
         self.SAVE.write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": str(self.SAVE)}
@@ -147,7 +149,7 @@ class Session:
     @classmethod
     def load(cls) -> "Session":
         b = json.loads(cls.SAVE.read_text())
-        s = cls(b["human"], b["max_year"]); s.eng.load(b["board"]); s.chronicle = b["chronicle"]
+        s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans")); s.eng.load(b["board"]); s.chronicle = b["chronicle"]
         s.persona_of = b["persona"]
         return s
 
@@ -157,8 +159,8 @@ class Session:
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
                 "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
-                "centers": self.eng.centers(), "channels": chans,
-                "legal": self.legal() if self.mode == "ORDERS" else []}
+                "centers": self.eng.centers(), "channels": chans, "lang": self.lang, "persona": self.persona_of,
+                "phase_type": self.eng.phase_type(), "legal": self.legal() if self.mode == "ORDERS" else []}
 
 
 class Msg:
