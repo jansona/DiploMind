@@ -58,10 +58,12 @@ class Gateway:
         self.aclient = httpx.AsyncClient(base_url=BASE_URL, trust_env=False, timeout=180)
         self.concurrency = concurrency
         self._sem: asyncio.Semaphore | None = None      # 限并发：最多 N 国同时打 ollama，余者排队
+        self._loop = None
 
     def _gate(self) -> asyncio.Semaphore:
-        if self._sem is None:                           # 懒建，绑当前事件循环
-            self._sem = asyncio.Semaphore(self.concurrency)
+        loop = asyncio.get_running_loop()
+        if self._sem is None or self._loop is not loop:  # 换了事件循环就重建(web 每请求一循环)
+            self._sem, self._loop = asyncio.Semaphore(self.concurrency), loop
         return self._sem
 
     def _msgs(self, messages, schema):

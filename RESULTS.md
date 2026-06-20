@@ -53,6 +53,11 @@ P1记忆库·P2Agent五步·P3引擎·P4编排器·P5网关档位·P6联调7国�
 ### 7 国实战验证
 真跑 7 国 2 相不崩、全国推进；139 调用、avg11s/max30s、失败 24%（并发争 24GB 比三国 12% 高）→ 满场延迟为头号优化点。
 
+### P9 二期：人类玩家入口（已通真服）
+人操一国(默认法国)+6AI: 聊天发言→AI看到回应→点选合法命令→6AI同步下令→结算。真服回环已验(scripts/drive_human)。
+- 起服 `uv run uvicorn diplomind.web:app --port 8731`，开 localhost:8731：新局→输入发言→「AI回一轮」(≤5轮)→多选合法令→「提交并结算」→看中心/编年史。
+- 全AI观战：/api/new {"human":null}；上帝视角 /api/snapshot。
+
 ### P9 Web 手测（CC 测不了浏览器，待晨验）
 1. 起服：`uv run uvicorn diplomind.web:app --port 8731`（已验证端点起得来、返 JSON/HTML）。
 2. 浏览器开 `http://localhost:8731/`，点「下一相」→ 7 国跑一相，中心数/编年史刷新（每相含 7 国≈调用，约 1–2 分钟）。
