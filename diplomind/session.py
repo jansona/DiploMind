@@ -28,17 +28,18 @@ MAX_ROUNDS = 3
 
 
 class Session:
-    def __init__(self, human: str | None = "FRANCE", max_year: int = 1910,
+    def __init__(self, human: str | None = "__cfg__", max_year: int = 1910,
                  lang: str | None = None, personas: dict | None = None, cfg=None) -> None:
         cfg = cfg or load_config()
-        self.human = human; self.max_year = max_year; self.lang = lang or cfg.lang
+        self.human = cfg.human if human == "__cfg__" else human          # configurable; null=all-AI
+        self.max_year = max_year; self.lang = lang or cfg.lang
         self.rounds = cfg.rounds                          # negotiation rounds from config
         self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
                           api=cfg.api, concurrency=cfg.concurrency)
         self.eng = OperationEngine(POWERS)
         keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
         chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
-        self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS}
+        self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS if c != self.human}  # human has no persona
         self.players = {c: (HumanPlayer(c) if c == human else
                             AIPlayer(Agent(c, PERSONAS[chosen[c]], self.gw, self.lang)))
                         for c in POWERS}
@@ -164,7 +165,10 @@ class Session:
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
                 "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
                 "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # persona hidden; debug only
-                "phase_type": self.eng.phase_type(), "legal": self.legal() if self.mode == "ORDERS" else []}
+                "phase_type": self.eng.phase_type(),
+                # ORDERS phase: who still owes orders (human until submit; 6 AI decide on submit)
+                "order_pending": ([self.human] if self.human else []) + sorted(self.ai) if self.mode == "ORDERS" else [],
+                "legal": self.legal() if self.mode == "ORDERS" else []}
 
 
 class Msg:

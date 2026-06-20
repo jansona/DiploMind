@@ -20,3 +20,15 @@ def test_gateway_openai_route():
     gw = Gateway(api="openai", base_url="https://x/v1", api_key="k")
     assert gw.path == "/chat/completions"                             # 非ollama走openai兼容(base_url含/v1)
     assert Gateway(api="ollama").path == "/api/chat"
+
+
+def test_human_config_no_persona():
+    from diplomind.config import Config
+    s = Session(cfg=Config(human="GERMANY"))
+    assert s.human == "GERMANY" and "GERMANY" not in s.persona_of      # 人扮国可配且无性格
+    assert len(s.persona_of) == 6
+
+
+def test_province_names():
+    from diplomind.names import PROVINCES, label
+    assert PROVINCES["PAR"] == ("Paris", "巴黎") and "巴黎" in label("PAR")
