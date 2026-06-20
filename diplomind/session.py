@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .agent import Agent
 from .bus import MessageBus
+from .config import load as load_config
 from .chronicle import generate
 from .engine import OperationEngine
 from .gateway import Gateway
@@ -28,15 +29,18 @@ MAX_ROUNDS = 3
 
 class Session:
     def __init__(self, human: str | None = "FRANCE", max_year: int = 1910,
-                 lang: str = "zh-Hans", personas: dict | None = None) -> None:
-        self.human = human; self.max_year = max_year; self.lang = lang
-        self.gw = Gateway()
+                 lang: str | None = None, personas: dict | None = None, cfg=None) -> None:
+        cfg = cfg or load_config()
+        self.human = human; self.max_year = max_year; self.lang = lang or cfg.lang
+        self.rounds = cfg.rounds                          # negotiation rounds from config
+        self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
+                          api=cfg.api, concurrency=cfg.concurrency)
         self.eng = OperationEngine(POWERS)
         keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
         chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
         self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS}
         self.players = {c: (HumanPlayer(c) if c == human else
-                            AIPlayer(Agent(c, PERSONAS[chosen[c]], self.gw, lang)))
+                            AIPlayer(Agent(c, PERSONAS[chosen[c]], self.gw, self.lang)))
                         for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
@@ -85,7 +89,7 @@ class Session:
                 self.bus.post(self.round, c, m.type, m.recipient, m.content)
         log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
         self.round += 1; self._cog = True            # cognition once per phase
-        if self.round > MAX_ROUNDS or self.bus.round_silent(self.round - 1):
+        if self.round > self.rounds or self.bus.round_silent(self.round - 1):
             self.mode = "ORDERS"; log.info("转下令")
         else:
             self._start_round()

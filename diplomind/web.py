@@ -16,12 +16,9 @@ app = FastAPI(title="DiploMind")
 S: dict = {"game": None}
 
 
-import os
-LANG = os.getenv("DIPLOMIND_LANG", "zh-Hans")     # set language at boot: DIPLOMIND_LANG=ja uvicorn ...
-
 @app.on_event("startup")
-async def boot():                                  # one game from boot; refresh read-only
-    S["game"] = Session("FRANCE", lang=LANG)
+async def boot():                                  # config via DIPLOMIND_CONFIG=conf/x.json (api/model/rounds/lang)
+    S["game"] = Session("FRANCE")
     asyncio.ensure_future(S["game"].begin_phase())
 
 
