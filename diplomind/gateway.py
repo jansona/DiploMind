@@ -107,11 +107,15 @@ class Gateway:
             return None, fails + 1
 
     def chat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
-        msgs, fails = messages, 0
+        msgs = messages
         for attempt in range(retry + 1):
             t0 = time.time()
-            data = self.sync.post(self.path, json=self._body(msgs, schema, temp)).json()
-            obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
+            try:
+                data = self.sync.post(self.path, json=self._body(msgs, schema, temp)).json()
+            except Exception as e:                       # timeout/network: don't crash, treat as fail->hold
+                self.log.record(kind="llm", tag=tag, model=self.model, latency_ms=round((time.time()-t0)*1000),
+                                fmt_fail=1, error=type(e).__name__); continue
+            obj, _ = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, 0)
             if obj is not None:
                 return obj
             msgs = self._retry_hint(messages, self._content(data))
@@ -119,11 +123,15 @@ class Gateway:
 
     async def achat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
         async with self._gate():                        # whole call holds one slot
-            msgs, fails = messages, 0
+            msgs = messages
             for attempt in range(retry + 1):
                 t0 = time.time()
-                data = (await self.aclient.post(self.path, json=self._body(msgs, schema, temp))).json()
-                obj, fails = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, fails)
+                try:
+                    data = (await self.aclient.post(self.path, json=self._body(msgs, schema, temp))).json()
+                except Exception as e:                   # timeout/network: don't crash, treat as fail->hold
+                    self.log.record(kind="llm", tag=tag, model=self.model, latency_ms=round((time.time()-t0)*1000),
+                                    fmt_fail=1, error=type(e).__name__); continue
+                obj, _ = self._validate(data, schema, round((time.time() - t0) * 1000), tag, attempt, 0)
                 if obj is not None:
                     return obj
                 msgs = self._retry_hint(messages, self._content(data))
