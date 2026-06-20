@@ -1,4 +1,4 @@
-"""人机会话单测：人发言入库、合法表非空、人下令仅合法+6AI结算+相推进。用 stub 免 LLM。"""
+"""人机会话单测：对等轮次(人发→AI齐才进轮)、人静默不挡、满轮转下令、人下令仅合法+6AI结算。stub 免 LLM。"""
 import asyncio
 
 from diplomind.schemas import Intent, Message, OrderSet, AttitudeUpdate
@@ -24,13 +24,22 @@ def _sess():
     return s
 
 
-def test_human_and_six_ai():
-    s = _sess()
-    assert len(s.ai) == 6 and "FRANCE" not in s.ai            # 人操法国, 6AI
-    s.human_say("broadcast", [], "我主和")
-    assert any("主和" in m.text for m in s.bus.msgs)           # 人发言入库
-    assert len(s.legal()) > 0                                 # 法国有合法令
-    res = asyncio.run(s.submit(["A PAR - BUR", "A PAR - MOON"]))  # 一合法一非法
-    assert "A PAR - BUR" in [m.action for m in next(iter(s.ai.values())).mem.actions] or res["phase"]
-    assert res["phase"] != "S1901M"                           # 已结算推进
-    assert s.mode == "NEGO" and s.round == 1                  # 回到下一相谈判
+def test_peer_round_advances_when_all_sent():
+    s = _sess(); assert len(s.ai) == 6
+    asyncio.run(s.begin_phase())
+    assert s.round == 1 and s.human in s.pending()       # AI已生成,等人
+    asyncio.run(s.human_say("broadcast", [], "我主和"))    # 人发→投递→进2轮
+    assert s.round == 2 and any("主和" in m.text for m in s.bus.msgs)
+
+def test_human_skip_does_not_block():
+    s = _sess(); asyncio.run(s.begin_phase())
+    asyncio.run(s.human_say("broadcast", [], "", skip=True))
+    assert s.round == 2                                   # 人跳过仍推进
+
+def test_full_negotiation_then_orders():
+    s = _sess(); asyncio.run(s.begin_phase())
+    for _ in range(5):
+        if s.mode == "NEGO": asyncio.run(s.human_say("broadcast", [], "talk"))
+    assert s.mode == "ORDERS" and len(s.legal()) > 0
+    res = asyncio.run(s.submit(["A PAR - BUR", "A PAR - MOON"]))
+    assert res["phase"] != "S1901M" and s.mode == "NEGO"
