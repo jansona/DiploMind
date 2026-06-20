@@ -22,6 +22,12 @@ def test_illegal_held_and_save_load():
     assert eng2.phase() == eng.phase()
 
 
+def test_auto_resolve_except_skips_human():
+    eng = OperationEngine(["ENGLAND", "FRANCE", "GERMANY"])
+    eng.auto_resolve(except_="FRANCE")                 # 人(法)不被兜底, 其余下令
+    assert not eng.game.get_orders("FRANCE") and eng.game.get_orders("ENGLAND")
+
+
 def test_neutral_and_endcheck():
     eng = OperationEngine(["FRANCE"])
     assert len(eng.dummy_powers) == 6                 # 1 活 6 中立
