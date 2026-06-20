@@ -55,6 +55,10 @@ def chron():
 def snap():
     g = S["game"]; return snapshot(g.ai, g.bus, g.eng) if g else {}
 
+@app.get("/api/map", response_class=HTMLResponse)
+def gmap():                                          # 复用 diplomacy 引擎渲染真棋盘(省份/中心/单位)
+    return S["game"].eng.game.render() if S["game"] else "<svg/>"
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     return INDEX
@@ -64,6 +68,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}</style>
 <h2>DiploMind — 你 <b id=h>FRANCE</b></h2><button onclick=nw()>新局</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span>
+<div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
 <h3>中心</h3><div id=c></div><h3>收件</h3><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button onclick=say(0)>发送</button><button onclick=say(1)>跳过本轮</button></div>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
@@ -73,8 +78,9 @@ let busy=0;async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers
 function R(s){ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=s.human||'观战';
 c.textContent=Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' ');log.textContent=s.inbox||'(空)';
 pd.textContent=(s.pending||[]).join(',')||'—';nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
-os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
-async function nw(){R(await G('/api/new','POST',{human:'FRANCE'}));ch.textContent=''}
+os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');
+if(s.phase!=last){last=s.phase;fetch('/api/map').then(r=>r.text()).then(t=>map.innerHTML=t)}}
+let last='';async function nw(){last='';R(await G('/api/new','POST',{human:'FRANCE'}));ch.textContent=''}
 async function say(sk){R(await G('/api/say','POST',{content:t.value,skip:!!sk}));t.value=''}
 async function sub(){let o=[...os.selectedOptions].map(x=>x.value);await G('/api/orders','POST',{orders:o});ch.textContent=(await G('/api/chronicle')).text}
 setInterval(async()=>{R(await G('/api/state'))},2000);nw()</script>"""
