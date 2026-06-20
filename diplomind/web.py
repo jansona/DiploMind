@@ -16,9 +16,12 @@ app = FastAPI(title="DiploMind")
 S: dict = {"game": None}
 
 
+import os
+LANG = os.getenv("DIPLOMIND_LANG", "zh-Hans")     # 开服时配语言: DIPLOMIND_LANG=ja uvicorn ...
+
 @app.on_event("startup")
 async def boot():                                  # 启动即开同一局, 刷新只读, 不重置
-    S["game"] = Session("FRANCE")
+    S["game"] = Session("FRANCE", lang=LANG)
     asyncio.ensure_future(S["game"].begin_phase())
 
 
@@ -82,9 +85,11 @@ def betrayals():
     return {"items": [{"who": c, "by": a.actor, "act": a.action, "yr": a.round}
                       for c, ag in (g.ai.items() if g else []) for a in ag.mem.actions if a.betray]}
 
-@app.get("/api/snapshot")
+@app.get("/api/snapshot")          # debug上帝视角: 性格(隐藏)+意图+记忆+暗盘
 def snap():
-    g = S["game"]; return snapshot(g.ai, g.bus, g.eng) if g else {}
+    g = S["game"]
+    if not g: return {}
+    return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
 
 @app.get("/api/map", response_class=HTMLResponse)
 def gmap():                                          # 复用 diplomacy 引擎渲染真棋盘(省份/中心/单位)
@@ -106,12 +111,11 @@ def index():
 INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}</style>
 <h2>DiploMind — 你 <b id=h>FRANCE</b></h2>
-语言<select id=lang><option value=zh-Hans>简中<option value=zh-Hant>繁中<option value=en>EN<option value=ja>日<option value=ko>韩<option value=de>德<option value=es>西</select>
 <button onclick="if(confirm('重开新局?'))nw()">新局</button> <button onclick=guide()>Guide</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
-<h3>中心</h3><div id=c></div><div id=per class=p></div>
+<h3>中心</h3><div id=c></div>
 <h3>聊天</h3><div id=tabs></div><button onclick=newp()>+私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过本轮</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
@@ -132,9 +136,8 @@ nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;
 S(st,s.your_turn?'可发言':(s.staged?'⏳待投递: '+s.staged:'✓已发/跳过,等其他玩家'));   // 发后进待投递, 全员齐才入聊天
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
-S(per,'性格: '+Object.entries(s.persona||{}).map(([k,v])=>k+'='+v).join(' '));
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
-async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE',lang:lang.value}))}
+async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE'}))}
 async function guide(){let d=await G('/api/guide');gv.style.display='';gv.textContent='命令缩写:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名简写('+d.locs.length+'):\\n'+d.locs.join(' ')}
 async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠ 不能发空消息';return}
 bs.disabled=bk.disabled=t.disabled=true;st.textContent='发送中…';
