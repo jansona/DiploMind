@@ -65,6 +65,7 @@ class Agent:
         prompt = self._order_prompt(eng, flat)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
         chosen = [o for o in (out.orders if out else []) if o in set(flat)]   # 非法剔除=hold
+        yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
         for o in chosen:
-            self.mem.record_action(0, self.country, o)
+            self.mem.record_action(yr, self.country, o)
         return out, chosen

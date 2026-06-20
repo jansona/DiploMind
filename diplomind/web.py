@@ -60,6 +60,14 @@ async def orders(r: OrdReq):
     asyncio.ensure_future(S["game"].begin_phase())
     return res
 
+@app.post("/api/save")
+def save():
+    return S["game"].save()
+
+@app.post("/api/load")
+async def load():
+    S["game"] = Session.load(); await S["game"].begin_phase(); return S["game"].state()
+
 @app.get("/api/chronicle")
 def chron():
     return {"text": book(S["game"].chronicle) if S["game"] else ""}

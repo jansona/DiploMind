@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+import random
+from pathlib import Path
 
 from .agent import Agent
 from .bus import MessageBus
@@ -28,8 +31,10 @@ class Session:
         self.human = human; self.max_year = max_year   # 到此年所有存活玩家和局
         self.gw = Gateway()
         self.eng = OperationEngine(POWERS)
+        styles = list(PERSONAS.values()); random.shuffle(styles)        # 性格随机分配, 每局不同
+        self.persona_of = {c: styles[i].name for i, c in enumerate(POWERS)}
         self.players = {c: (HumanPlayer(c) if c == human else
-                            AIPlayer(Agent(c, list(PERSONAS.values())[i], self.gw)))
+                            AIPlayer(Agent(c, styles[i], self.gw)))
                         for i, c in enumerate(POWERS)}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
@@ -107,6 +112,21 @@ class Session:
 
     def eng_legal(self, c):
         return {o for v in self.eng.legal_orders(c).values() for o in v}
+
+    SAVE = Path("logs") / "save.json"
+
+    def save(self) -> dict:                              # 存档: 棋盘+编年史+各国记忆
+        blob = {"human": self.human, "max_year": self.max_year, "board": self.eng.save(),
+                "chronicle": self.chronicle, "persona": self.persona_of,
+                "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
+        self.SAVE.write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": str(self.SAVE)}
+
+    @classmethod
+    def load(cls) -> "Session":
+        b = json.loads(cls.SAVE.read_text())
+        s = cls(b["human"], b["max_year"]); s.eng.load(b["board"]); s.chronicle = b["chronicle"]
+        s.persona_of = b["persona"]
+        return s
 
     def state(self) -> dict:
         chans = self.bus.channels(self.human, self.round) if self.human else {}
