@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import json
 import re
+import asyncio
 import time
 from typing import Type, TypeVar
 
@@ -48,11 +49,18 @@ def _extract(txt: str) -> str:
 
 class Gateway:
     def __init__(self, model: str = DEFAULT_MODEL, log: DebugLog | None = None,
-                 temperature: float = 0.7, think: bool = False) -> None:
+                 temperature: float = 0.7, think: bool = False, concurrency: int = 3) -> None:
         self.model, self.temperature, self.think = model, temperature, think
         self.log = log or DebugLog()
         self.sync = httpx.Client(base_url=BASE_URL, trust_env=False, timeout=180)
         self.aclient = httpx.AsyncClient(base_url=BASE_URL, trust_env=False, timeout=180)
+        self.concurrency = concurrency
+        self._sem: asyncio.Semaphore | None = None      # 限并发：最多 N 国同时打 ollama，余者排队
+
+    def _gate(self) -> asyncio.Semaphore:
+        if self._sem is None:                           # 懒建，绑当前事件循环
+            self._sem = asyncio.Semaphore(self.concurrency)
+        return self._sem
 
     def _msgs(self, messages, schema):
         spec = f"\n严格只输出一个 JSON 对象，含字段: {_fields(schema)}。无解释、无 markdown。"
@@ -86,11 +94,12 @@ class Gateway:
         return None
 
     async def achat(self, messages, schema: Type[T], tag: str = "", retry: int = 2, temp=None) -> T | None:
-        fails = 0
-        for attempt in range(retry + 1):
-            t0 = time.time()
-            r = await self.aclient.post("/api/chat", json=self._body(messages, schema, temp))
-            obj, fails = self._validate(r.json(), schema, round((time.time() - t0) * 1000), tag, attempt, fails)
-            if obj is not None:
-                return obj
-        return None
+        async with self._gate():                        # 整次调用(含重试)占一个名额
+            fails = 0
+            for attempt in range(retry + 1):
+                t0 = time.time()
+                r = await self.aclient.post("/api/chat", json=self._body(messages, schema, temp))
+                obj, fails = self._validate(r.json(), schema, round((time.time() - t0) * 1000), tag, attempt, fails)
+                if obj is not None:
+                    return obj
+            return None
