@@ -4,9 +4,10 @@
 注：qwen3.5:9b 上 ollama 的 format=schema 语法约束慢/失效，故走 prompt 引导 + 容错解析。"""
 from __future__ import annotations
 
-import json
-import re
 import asyncio
+import json
+import os
+import re
 import time
 from typing import Type, TypeVar
 
@@ -18,7 +19,7 @@ from .debuglog import DebugLog
 T = TypeVar("T", bound=BaseModel)
 
 BASE_URL = "http://localhost:11434"
-DEFAULT_MODEL = "qwen3.5:4b"
+DEFAULT_MODEL = os.getenv("DIPLOMIND_MODEL", "qwen3.5:4b")   # 开服可换: DIPLOMIND_MODEL=qwen3.5:2b
 
 # 难度=纯模型档位：弱模型策略/圆谎差=简单，强=困难。AI 目标不变、不放水。
 DIFFICULTY = {"easy": "qwen3.5:4b", "normal": "qwen3.5:4b", "hard": "qwen3.5:9b"}
