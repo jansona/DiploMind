@@ -15,8 +15,7 @@ class FakeGW:
         if schema is OrderSet:
             return OrderSet(orders=["A PAR - BUR", "A PAR - MOON"], reasoning="x")  # 一合法一非法
         if schema is AttitudeUpdate:
-            from diplomind.schemas import Attitude
-            return AttitudeUpdate(scores=[Attitude(country="GERMANY", trust=-60, attitude="叛徒")])
+            return AttitudeUpdate(scores={"GERMANY": -60})
         return None
 
 
@@ -38,4 +37,4 @@ def test_intent_continuity():
 def test_attitude_update():
     ag, eng = _ag()
     ag.update(eng)
-    assert ag.mem.relation("GERMANY").trust == -60 and ag.mem.relation("GERMANY").attitude == "叛徒"
+    assert ag.mem.relation("GERMANY").trust == -60

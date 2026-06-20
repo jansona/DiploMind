@@ -5,7 +5,7 @@ from diplomind.agent import Agent
 from diplomind.engine import OperationEngine
 from diplomind.orchestrator import Orchestrator
 from diplomind.personalities import PERSONAS
-from diplomind.schemas import AttitudeUpdate, Attitude, Intent, Message, OrderSet
+from diplomind.schemas import AttitudeUpdate, Intent, Message, OrderSet
 
 
 class StubGW:
@@ -13,7 +13,7 @@ class StubGW:
     async def achat(self, m, s, tag="", retry=2, temp=None): return self._mk(s)
     def _mk(self, s):
         if s is Intent: return Intent(goal="扩张", target="GERMANY")
-        if s is AttitudeUpdate: return AttitudeUpdate(scores=[Attitude(country="GERMANY", trust=-30)])
+        if s is AttitudeUpdate: return AttitudeUpdate(scores={"GERMANY": -30})
         if s is Message: return Message(content="缔盟?")
         if s is OrderSet: return OrderSet(orders=[])
         return None

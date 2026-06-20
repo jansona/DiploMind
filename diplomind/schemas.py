@@ -25,23 +25,24 @@ class Intent(BaseModel):
         return v if isinstance(v, int) else 0
 
 
-class Attitude(BaseModel):
-    """态度评分：模型读事件后给各国信任分(-100..100)+一句定性。"""
-    country: str = Field(description="对象国")
-    trust: int = Field(0, description="-100敌对..100盟友")
-    attitude: str = Field("中立", description="一词定性")
-
-    @field_validator("trust", mode="before")
-    @classmethod
-    def _i(cls, v):
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return 0
-
-
 class AttitudeUpdate(BaseModel):
-    scores: list[Attitude] = Field(default_factory=list)
+    """态度评分：顺模型天性收 {国: 分} 字典；也吞 list-of-objects / null，统一成 {国:{trust}}。"""
+    scores: dict[str, int] = Field(default_factory=dict, description='如 {"GERMANY": -50}')
+
+    @field_validator("scores", mode="before")
+    @classmethod
+    def _norm(cls, v):
+        if isinstance(v, list):                                  # [{"country":x,"trust":n}] → {x:n}
+            v = {d.get("country", ""): d.get("trust", d.get("trust_score", 0)) for d in v if isinstance(d, dict)}
+        if not isinstance(v, dict):
+            return {}
+        out = {}
+        for k, n in v.items():
+            try:
+                out[k] = int(n)
+            except (TypeError, ValueError):
+                out[k] = 0                                       # null/坏 → 0
+        return out
 
 
 class OrderSet(BaseModel):

@@ -24,10 +24,10 @@ class Agent:
 
     # 2. 更新态度（调模型）：读近况事件评各国信任分，写回记忆
     def update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
-        prompt = self.perceive(eng, inbox) + "\n据近况给接触各国信任分(-100..100)+一词定性，放 scores。"
+        prompt = self.perceive(eng, inbox) + '\n据近况评各国信任分。scores 为字典: {"国名": -100到100}。'
         out = self.gw.chat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
         if out:
-            self.mem.apply_attitude({s.country: {"trust": s.trust, "attitude": s.attitude} for s in out.scores})
+            self.mem.apply_attitude({c: {"trust": t} for c, t in out.scores.items()})
         return out
 
     # 3. 隐藏意图（调模型）：只喂自己，默认延续上回合微调
@@ -74,10 +74,10 @@ class Agent:
 
     # --- 异步版（7国并发用）---
     async def a_update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
-        prompt = self.perceive(eng, inbox) + "\n据近况给接触各国信任分(-100..100)+一词定性，放 scores。"
+        prompt = self.perceive(eng, inbox) + '\n据近况评各国信任分。scores 为字典: {"国名": -100到100}。'
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
         if out:
-            self.mem.apply_attitude({s.country: {"trust": s.trust, "attitude": s.attitude} for s in out.scores})
+            self.mem.apply_attitude({c: {"trust": t} for c, t in out.scores.items()})
         return out
 
     async def a_intent(self, eng: OperationEngine) -> Intent | None:
