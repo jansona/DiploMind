@@ -46,6 +46,13 @@ def test_double_send_idempotent_while_ai_pending():
     assert s.round == 1 and s.human_done                    # AI 没齐, 停在本轮等
     assert sum("我" in m.text or m.sender == "FRANCE" for m in s.bus.msgs) == 1
 
+def test_open_private_channel_backend():
+    s = _sess()
+    k = s.open_private(["germany"])
+    assert k == "FRANCE·GERMANY"
+    assert "FRANCE·GERMANY" in s.state()["channels"]    # 空私聊也由后端回, 前端不必本地存
+    assert s.state()["human_done"] is False             # 是否已发言后端判
+
 def test_full_negotiation_then_orders():
     s = _sess(); asyncio.run(s.begin_phase())
     for _ in range(5):

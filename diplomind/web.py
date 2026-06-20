@@ -47,6 +47,13 @@ async def say(r: SayReq):
     await S["game"].human_say(r.scope, r.recipient, r.content, r.skip)
     return S["game"].state()
 
+class PrivReq(BaseModel):
+    recipient: list[str] = []
+
+@app.post("/api/open")           # 登记一个私聊频道(后端维护, 前端不本地存)
+def open_private(r: PrivReq):
+    return {"channel": S["game"].open_private(r.recipient)}
+
 @app.post("/api/orders")
 async def orders(r: OrdReq):
     res = await S["game"].submit(r.orders)
@@ -81,23 +88,19 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
 <script>
-const H='FRANCE';let act='群聊',chans={'群聊':[]},mine=[],acted='',last='';
+let act='群聊',chans={},last='';   // 前端只存"当前看哪个tab"; 频道/是否已发言全来自后端
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
-function drawtabs(){tabs.innerHTML=Object.keys(chans).map(k=>'<button class='+(k==act?'on':'')+' onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('');
-log.textContent=(chans[act]||[]).join('\\n')||'(空)'}
-function pick(k){act=k;drawtabs()}              // 切 tab 永远可点, 与发言禁用无关
-function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=[H,...p.split(',').map(x=>x.trim().toUpperCase())].sort().join('·');if(!chans[act])chans[act]=[];drawtabs()}
-function R(s){ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=s.human||'观战';
+function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)'}
+async function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=(await G('/api/open','POST',{recipient:p.split(',').map(x=>x.trim())})).channel}
+function R(s){let H=s.human;ph.textContent=s.phase;md.textContent=s.mode;rd.textContent=s.round;h.textContent=H||'观战';
 c.textContent=Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' ');pd.textContent=(s.pending||[]).join(',')||'—';
-let nc=s.channels||{};for(let k in nc)chans[k]=nc[k];if(!chans[act])chans[act]=[];drawtabs();  // 合并后端频道,保留本地新建tab
+chans=s.channels||{};if(!chans[act])act='群聊';tabs.innerHTML=Object.keys(chans).map(k=>'<button class='+(k==act?'on':'')+' onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('');pick(act);
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
-mine=(s.pending||[]).includes(s.human);bs.disabled=bk.disabled=t.disabled=!mine;
-if(mine)acted='';st.textContent=acted?('✓本轮已'+acted+',等其他玩家'):'';
+bs.disabled=bk.disabled=t.disabled=!!s.human_done;st.textContent=s.human_done?'✓本轮已操作,等其他玩家':'';
 os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');
 if(s.phase!=last){last=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x)}}
-async function nw(){last='';acted='';chans={'群聊':[]};act='群聊';R(await G('/api/new','POST',{human:H}))}
-async function say(sk){acted=sk?'跳过':'发言';st.textContent='✓本轮已'+acted+',等其他玩家';
-let scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
+async function nw(){act='群聊';R(await G('/api/new','POST',{human:'FRANCE'}))}
+async function say(sk){let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});t.value=''}
 async function sub(){let o=[...os.selectedOptions].map(x=>x.value);await G('/api/orders','POST',{orders:o});ch.textContent=(await G('/api/chronicle')).text}
 setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
