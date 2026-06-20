@@ -34,6 +34,7 @@ class Session:
         self._ai_msgs: dict[str, object] = {}     # 本轮 AI 待投递
         self.human_done = human is None
         self._silent_streak = 0
+        self._committed: set[int] = set()         # 已结算轮次, 防重复推进
 
     async def begin_phase(self) -> None:
         await asyncio.gather(*(a.a_update(self.eng) for a in self.ai.values()))
@@ -48,21 +49,24 @@ class Session:
     async def _gen(self, ib) -> None:
         outs = await asyncio.gather(*(a.a_negotiate(self.eng, ib[c]) for c, a in self.ai.items()))
         self._ai_msgs = {c: m for c, m in zip(self.ai, outs)}
+        await self._maybe_advance()                # AI 跑完也来判一次, 否则人先发会卡死
 
     def pending(self) -> list[str]:
         p = [] if (self._ai_task and self._ai_task.done()) else list(self.ai)
         return ([] if self.human_done else [self.human]) + p
 
     async def human_say(self, scope: str, recipient: list[str], content: str, skip: bool = False) -> None:
-        if self.human and not skip:
+        if self.human_done:                        # 本轮已操作, 重复发送幂等忽略
+            return
+        if self.human and not skip and content.strip():
             self.bus.post(self.round, self.human, scope, recipient, content)
         self.human_done = True
         await self._maybe_advance()
 
     async def _maybe_advance(self) -> None:
-        if self.pending():                         # 还有人没发，等
+        if self.pending() or self.round in self._committed:   # 没齐 / 已结算 → 不重复推进
             return
-        any_msg = bool(self.human and not self.human_done) or any(self._ai_msgs.values())
+        self._committed.add(self.round)
         for c, m in self._ai_msgs.items():         # AI 本轮投递
             if m:
                 self.bus.post(self.round, c, m.type, m.recipient, m.content)
@@ -87,7 +91,7 @@ class Session:
         while self.eng.phase_type() != "M" and not self.eng.is_done():
             self.eng.auto_resolve(); nxt = self.eng.process()
         self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
-        self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._silent_streak = 0
+        self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._silent_streak = 0; self._committed = set()
         for a in self.ai.values():
             a.mem.tick()
         return {"phase": nxt, "end": self.eng.check_end()}
