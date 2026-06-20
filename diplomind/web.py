@@ -44,8 +44,8 @@ def state():
 
 @app.post("/api/say")
 async def say(r: SayReq):
-    await S["game"].human_say(r.scope, r.recipient, r.content, r.skip)
-    return S["game"].state()
+    res = await S["game"].human_say(r.scope, r.recipient, r.content, r.skip)
+    return {**res, "state": S["game"].state()}
 
 class PrivReq(BaseModel):
     recipient: list[str] = []
@@ -103,8 +103,9 @@ bs.disabled=bk.disabled=t.disabled=!!s.human_done;S(st,s.human_done?'✓本轮�
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 async function nw(){act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:'FRANCE'}))}
-async function say(sk){bs.disabled=bk.disabled=t.disabled=true;st.textContent='✓本轮已操作,等其他玩家';   // 点完立刻反馈
+async function say(sk){if(t.disabled)return;bs.disabled=bk.disabled=t.disabled=true;st.textContent='✓本轮已操作,等其他玩家';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
-R(await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk}));t.value=''}
+let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});
+if(!r.ok)st.textContent='⚠ '+r.reason;else t.value='';R(r.state)}   // 重复操作被拒, 不静默跳轮
 async function sub(){await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}
 setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""

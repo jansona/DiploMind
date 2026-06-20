@@ -56,11 +56,13 @@ class Session:
     def pending(self) -> list[str]:
         return [c for c in self.players if c not in self._done]
 
-    async def human_say(self, scope, recipient, content, skip=False) -> None:
+    async def human_say(self, scope, recipient, content, skip=False) -> dict:
         p = self.players.get(self.human)
-        if isinstance(p, HumanPlayer):
-            m = None if (skip or not content.strip()) else Message(type=scope, recipient=recipient, content=content)
-            p.submit_msg(m)
+        if self.mode != "NEGO" or not p._msg or p._msg.done():     # 没轮到/本轮已操作 → 拒, 报错
+            return {"ok": False, "reason": "本轮已发言或跳过"}
+        m = None if (skip or not content.strip()) else Message(type=scope, recipient=recipient, content=content)
+        self.players[self.human].submit_msg(m)
+        return {"ok": True}
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:
