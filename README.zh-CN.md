@@ -14,6 +14,7 @@
 - **轮次同步**：每国每轮一条消息(群发或私聊)，轮末统一投递；全员静默或满 N 轮(默认3,可配)转下令。
   人与 AI 共用流程，只是输入不同(前端 vs LLM)。
 - **隐藏性格** 驱动 7 种打法；背叛盟友→信任暴跌+记仇。难度=各国所用模型档位。
+- 主菜单：新游戏(选国/语言/预设)或继续(读存档)；信任/意图/暗盘默认隐藏，`DIPLOMIND_DEBUG=1` 才显示。
 
 ## 技术栈
 - Python 后端，复用 `diplomacy` 引擎做地图与裁决。
@@ -25,7 +26,7 @@
 ollama serve && ollama pull qwen3.5:4b        # 本地模型
 uv sync                                        # 依赖(Python 3.11)
 uv run uvicorn diplomind.web:app --port 8731   # 开 http://localhost:8731
-DIPLOMIND_LANG=ja uv run uvicorn diplomind.web:app   # 配谈判语言
+DIPLOMIND_DEBUG=1 uv run uvicorn diplomind.web:app   # 开 debug: 显示信任/意图/暗盘(默认关)
 uv run pytest                                  # 测试
 ```
 

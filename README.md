@@ -14,8 +14,9 @@ ollama serve && ollama pull qwen3.5:4b              # 1. local model
 uv sync                                             # 2. deps (Python 3.11)
 uv run uvicorn diplomind.web:app --port 8731        # 3. open http://localhost:8731
 ```
-Pick your country + language on the start screen, then play. Config file optional
-(`DIPLOMIND_CONFIG=conf/example.json` for non-ollama OpenAI-compatible APIs).
+Main menu → New Game (pick country/language/preset) or Continue (load a save), then play.
+`DIPLOMIND_DEBUG=1` reveals the god view (trust/intent/memory/private DMs); off by default.
+Config file optional (`DIPLOMIND_CONFIG=conf/example.json` for OpenAI-compatible APIs).
 
 ## Play modes
 - **Human vs AI** — you take one power, six AI fill the rest.
