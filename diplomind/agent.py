@@ -61,9 +61,17 @@ class Agent:
         ctx = self.perceive(eng, inbox) + f"\n意图:{self.mem.intent}\n" + self.NEGO_TPL
         return await self.gw.achat([self.sys, {"role": "user", "content": ctx}], Message, tag=f"{self.country}:nego", retry=1, temp=0.4)
 
+    def _stab_cue(self, eng: OperationEngine) -> str:
+        it = self.mem.intent or {}                          # planned betrayal: strike target at move_turn
+        yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
+        tgt = it.get("target")
+        if tgt and tgt != self.country and it.get("move_turn", 9999) <= yr:
+            return f"\n本回合是动手回合: 若已接壤 {tgt}, 优先进攻其中心(背刺), 趁信任反水收益最大。"
+        return ""
+
     async def a_decide_orders(self, eng: OperationEngine) -> tuple[OrderSet | None, list[str]]:
         flat = self._legal_flat(eng)
-        prompt = self._order_prompt(eng, flat)
+        prompt = self._order_prompt(eng, flat) + self._stab_cue(eng)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
         chosen = [o for o in (out.orders if out else []) if o in set(flat)]   # drop illegal = hold
         yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
