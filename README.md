@@ -10,13 +10,13 @@ turn on you when the board says so.
 
 ## Quick start
 ```bash
-ollama serve && ollama pull qwen3.5:4b              # 1. local model
+ollama serve && ollama pull qwen3.5:4b              # 1. an LLM backend (local default)
 uv sync                                             # 2. deps (Python 3.11)
 uv run uvicorn diplomind.web:app --port 8731        # 3. open http://localhost:8731
+uv run pytest                                       # tests
 ```
 Main menu → New Game (pick country/language/preset) or Continue (load a save), then play.
 `DIPLOMIND_DEBUG=1` reveals the god view (trust/intent/memory/private DMs); off by default.
-Config file optional (`DIPLOMIND_CONFIG=conf/example.json` for OpenAI-compatible APIs).
 
 ## Play modes
 - **Human vs AI** — you take one power, six AI fill the rest.
@@ -24,31 +24,26 @@ Config file optional (`DIPLOMIND_CONFIG=conf/example.json` for OpenAI-compatible
 - **All-AI spectator** — watch seven AI scheme to 18 centers or a survivor draw.
 
 ## How it works
-- **Synchronous rounds**: every power drafts one message per round (broadcast or
-  private), all delivered together; a fully silent round (or the round cap, default 3)
-  ends negotiation, then everyone orders. Humans and AIs share the same flow —
-  only the input differs (UI vs LLM).
-- **Hidden personas** drive 7 play styles; betraying an ally tanks trust and is
-  remembered. Difficulty = which model a power runs.
+- **Synchronous rounds**: each power sends up to 3 messages/round (group or private),
+  delivered together; a fully silent round (or the round cap) ends negotiation, then
+  everyone orders. Humans and AIs share the same flow — only input differs (UI vs LLM).
+- **Hidden personas** drive 7 play styles; betraying an ally tanks trust and is remembered.
+  Difficulty = which model a power runs.
+
+## LLM backend (any OpenAI-compatible API)
+DiploMind talks to **any OpenAI-compatible API**; local ollama is just the default.
+Point it at OpenAI, GLM, Aliyun, vLLM, etc. via a config file:
+```bash
+DIPLOMIND_CONFIG=conf/example.json uv run uvicorn diplomind.web:app --port 8731
+```
+`conf/*.json`: `base_url`, `api_key`, `model`, `api` (`ollama`|`openai`), `rounds`,
+`lang`, `concurrency`, `timeout`, `human`. See `conf/ollama.json` / `conf/example.json`.
 
 ## Tech stack
-- Python backend, reuses the `diplomacy` engine for the map/adjudication.
-- LLM via local **ollama** (default `qwen3.5:4b`); native `/api/chat` with
-  grammar-constrained JSON, lenient parsing, concurrency cap.
-- FastAPI web UI (real board, three-channel chat, orders, chronicle, debug).
-
-## Run locally
-```bash
-ollama serve && ollama pull qwen3.5:4b        # local model
-uv sync                                        # deps (Python 3.11)
-uv run uvicorn diplomind.web:app --port 8731   # open http://localhost:8731
-DIPLOMIND_LANG=ja uv run uvicorn diplomind.web:app   # set negotiation language
-uv run pytest                                  # tests
-```
+Python backend reusing the `diplomacy` engine; FastAPI web UI (real board, three-channel
+chat, orders, chronicle, debug); structured-output JSON with lenient parsing + concurrency cap.
 
 ## License
 AGPLv3 — based on the open-source [`diplomacy`](https://github.com/diplomacy/diplomacy)
 engine (AGPLv3), so DiploMind is AGPLv3 too. Full text in [LICENSE](LICENSE).
-
-Docs: archived dev notes (product, architecture, personas, DEMO results) in
-[docs/archive/](docs/archive/); `docs/` is reserved for future formal docs.
+Archived dev notes in [docs/archive/](docs/archive/); `docs/` for future formal docs.
