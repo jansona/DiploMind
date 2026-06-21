@@ -24,7 +24,7 @@ class Agent:
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
     NEGO_TPL = ('对照棋盘+各国上回合命令(言行)+你的记忆(承诺/恩怨)说话：守信度高就守诺，低就利用；'
-                '谁言行不一或背刺过你就当面点破/施压。按你的性格选群发或私聊拉人。\n'
+                '谁言行不一或背刺过你就当面点破/施压。收到私聊优先私聊回复发件人，别只群发。按性格选群发或私聊拉人。\n'
                 '只输出此 JSON：{"type":"broadcast","recipient":[],"content":"…"}\n'
                 'broadcast=群发(recipient 留空)；private=私聊(recipient 填国名)；无话则 content 留空(静默)。')
 

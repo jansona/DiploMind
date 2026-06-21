@@ -3,7 +3,7 @@
   "api_key": "YOUR_KEY",
   "model": "glm-4-flash",
   "api": "openai",
-  "rounds": 3,
+  "rounds": 5,
   "lang": "zh-Hans",
   "concurrency": 3,
   "timeout": 120

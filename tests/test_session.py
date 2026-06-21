@@ -35,13 +35,14 @@ async def test_six_ai_one_human():
     assert len(s.ai) == 6 and s.pending() == ["FRANCE"]   # AI齐, 只等人
 
 @pytest.mark.asyncio
-async def test_human_send_each_round_no_skip():
+async def test_human_3_msgs_then_advance():
     s = _sess(); await s.begin_phase()
-    assert s.your_turn()                                 # 开局即可发, 不等AI
-    assert (await s.human_say("broadcast", [], "和平"))["ok"]
-    assert (await s.human_say("broadcast", [], "又点"))["ok"] is False  # 同轮重复→拒
+    assert s.your_turn()                                 # 开局即可发
+    for i in range(3): assert (await s.human_say("broadcast", [], f"m{i}"))["ok"]  # 每轮最多3条
     await _tick()
-    assert s.round == 2 and s.your_turn()                # 进2轮又能发, 没被跳
+    assert s.round == 2 and s.your_turn()                # 3条后进2轮, 又能发
+    assert (await s.human_say("broadcast", [], "", skip=True))["ok"]  # 跳过也推进
+    await _tick(); assert s.round == 3
 
 @pytest.mark.asyncio
 async def test_skip_and_full_to_orders():

@@ -48,7 +48,7 @@ class Session:
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
         self.chronicle: list[str] = []; self._opened: set[str] = set()
-        self._done: dict[str, object] = {}; self._committed: set[int] = set(); self._cog = False
+        self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
 
     async def begin_phase(self) -> None:
         self._cog = False
@@ -58,7 +58,7 @@ class Session:
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
 
     def _start_round(self) -> None:
-        self._done = {}                                  # per-round submissions
+        self._done = {}; self._hmsgs = {}                # per-round submissions (human up to 3 msgs)
         ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
         for c, p in self.ai.items():
             asyncio.ensure_future(self._run(c, p, ib[c]))   # AIs draft in parallel
@@ -71,25 +71,31 @@ class Session:
     def pending(self) -> list[str]:
         return [c for c in self.players if c not in self._done]   # who hasn't acted
 
+    MSGS_PER_ROUND = 3                                    # each player can send up to 3 msgs/round (multi-channel)
+
     async def human_say(self, scope, recipient, content, skip=False) -> dict:
         if self.mode != "NEGO" or self.human in self._done:        # already acted -> reject
             return {"ok": False, "reason": "本轮已发言/跳过, 等其他玩家"}
         if not skip and not content.strip():
             return {"ok": False, "reason": "不能发空消息"}
-        self._done[self.human] = None if skip else Message(type=scope, recipient=recipient, content=content)
-        await self._maybe_advance()
-        return {"ok": True}
+        if not skip:
+            self._hmsgs.setdefault(self.human, []).append(Message(type=scope, recipient=recipient, content=content))
+        if skip or len(self._hmsgs.get(self.human, [])) >= self.MSGS_PER_ROUND:
+            self._done[self.human] = self._hmsgs.get(self.human) or None   # done after skip or 3 msgs
+            await self._maybe_advance()
+        return {"ok": True, "sent": len(self._hmsgs.get(self.human, []))}
 
-    def your_turn(self) -> bool:                          # can speak this round (independent of AI)
+    def your_turn(self) -> bool:                          # can speak (<3 msgs, not done) this round
         return self.mode == "NEGO" and self.human is not None and self.human not in self._done
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:
             return
         self._committed.add(self.round)
-        for c, m in self._done.items():
-            if m and m.content.strip():
-                self.bus.post(self.round, c, m.type, m.recipient, m.content)
+        for c, v in self._done.items():
+            for m in (v if isinstance(v, list) else [v]):   # human may stage up to 3, AI one
+                if m and m.content.strip():
+                    self.bus.post(self.round, c, m.type, m.recipient, m.content)
         log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
         self.round += 1; self._cog = True            # cognition once per phase
         if self.round > self.rounds or self.bus.round_silent(self.round - 1):
@@ -177,7 +183,7 @@ class Session:
         for k in self._opened: chans.setdefault(k, [])
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
-                "staged": (self._done[self.human].content if self._done.get(self.human) else "") if self.human in self._done else "",
+                "sent": len(self._hmsgs.get(self.human, [])), "staged": "已发%d/3" % len(self._hmsgs.get(self.human, [])),
                 "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # persona hidden; debug only
                 "phase_type": self.eng.phase_type(),
                 # ORDERS phase: who still owes orders (human until submit; 6 AI decide on submit)
