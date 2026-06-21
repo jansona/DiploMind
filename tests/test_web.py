@@ -10,3 +10,10 @@ def test_persistent_game_on_boot():
         assert c.get("/api/state").json()["mode"] in ("NEGO", "ORDERS")
         assert c.get("/api/state").json()["human"] == "FRANCE"     # 同一局, 只读
         assert len(c.get("/api/map").text) > 1000                  # 真棋盘已就绪
+
+
+def test_i18n_files():
+    with TestClient(app) as c:
+        assert c.get("/api/i18n/en").json()["send"] == "Send"
+        assert c.get("/api/i18n/zh-Hans").json()["send"] == "发送"
+        assert c.get("/api/i18n/xx").json()["send"] == "Send"     # unknown -> English fallback
