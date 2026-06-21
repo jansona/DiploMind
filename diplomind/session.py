@@ -31,7 +31,9 @@ class Session:
     def __init__(self, human: str | None = "__cfg__", max_year: int = 1910,
                  lang: str | None = None, personas: dict | None = None, cfg=None) -> None:
         cfg = cfg or load_config()
-        self.human = cfg.human if human == "__cfg__" else human          # configurable; null=all-AI
+        h = cfg.human if human == "__cfg__" else human
+        self.humans = [h] if isinstance(h, str) else list(h or [])       # 0/1/many humans, any power
+        self.human = self.humans[0] if self.humans else None             # primary (single-player UI compat)
         self.max_year = max_year; self.lang = lang or cfg.lang
         self.rounds = cfg.rounds                          # negotiation rounds from config
         self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
@@ -39,8 +41,8 @@ class Session:
         self.eng = OperationEngine(POWERS)
         keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
         self.persona_key = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
-        self.persona_of = {c: PERSONAS[self.persona_key[c]].name for c in POWERS if c != self.human}  # human has no persona
-        self.players = {c: (HumanPlayer(c) if c == self.human else      # compare self.human, not raw arg
+        self.persona_of = {c: PERSONAS[self.persona_key[c]].name for c in POWERS if c not in self.humans}
+        self.players = {c: (HumanPlayer(c) if c in self.humans else      # humans not built as AI
                             AIPlayer(Agent(c, PERSONAS[self.persona_key[c]], self.gw, self.lang)))
                         for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
