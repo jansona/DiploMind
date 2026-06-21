@@ -145,19 +145,28 @@ class Session:
                     vm.record_action(yr, taker, f"夺{cen}", betray=bool(ally))
                     if ally: vm.apply_attitude({taker: {"trust": -80, "attitude": "叛徒"}})  # hold grudge
 
-    SAVE = Path("logs") / "save.json"
-
-    def save(self) -> dict:                              # save: board+chronicle+memories
-        blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
-                "chronicle": self.chronicle, "persona_key": self.persona_key,
-                "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
-        self.SAVE.write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": str(self.SAVE)}
+    SAVES = Path("logs") / "saves"
 
     @classmethod
-    def load(cls) -> "Session":
-        b = json.loads(cls.SAVE.read_text())
+    def list_saves(cls) -> list[str]:
+        return sorted(p.stem for p in cls.SAVES.glob("*.json")) if cls.SAVES.exists() else []
+
+    def save(self, name: str = "auto") -> dict:          # save slot: board+chronicle+memories
+        self.SAVES.mkdir(parents=True, exist_ok=True)
+        blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
+                "chronicle": self.chronicle, "persona_key": self.persona_key, "round": self.round, "mode": self.mode,
+                "msgs": [vars(m) for m in self.bus.msgs],   # chat history (incl private)
+                "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
+        (self.SAVES / f"{name}.json").write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": name}
+
+    @classmethod
+    def load(cls, name: str = "auto") -> "Session":
+        b = json.loads((cls.SAVES / f"{name}.json").read_text())
         s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))  # same personas
         s.eng.load(b["board"]); s.chronicle = b["chronicle"]
+        s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
+        for m in b.get("msgs", []):                      # restore chat history
+            s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"])
         for c, snap in (b.get("mem") or {}).items():     # restore AI memory (relations/actions/diary)
             if c in s.ai:
                 s.ai[c].mem.restore(snap)

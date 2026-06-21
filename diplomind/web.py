@@ -3,6 +3,8 @@ CC 测不了浏览器→端点 TestClient 测, 手测见 RESULTS.md。地图 SVG
 from __future__ import annotations
 
 import asyncio
+import json
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
@@ -17,14 +19,16 @@ app = FastAPI(title="DiploMind")
 S: dict = {"game": None}
 
 
-@app.on_event("startup")
-async def boot():                                  # config via DIPLOMIND_CONFIG=conf/x.json (api/model/rounds/lang)
-    S["game"] = Session("FRANCE")
-    asyncio.ensure_future(S["game"].begin_phase())
+PRE = Path(__file__).parent.parent / "conf" / "presets"
+
+@app.get("/api/menu")        # main menu: presets + saves; no auto game (start screen)
+def menu():
+    pres = {p.stem: json.loads(p.read_text()) for p in PRE.glob("*.json")} if PRE.exists() else {}
+    return {"presets": pres, "saves": Session.list_saves()}
 
 
 class NewReq(BaseModel):
-    human: str | None = "__cfg__"; lang: str | None = None; personas: dict | None = None
+    human: str | None = "__cfg__"; lang: str | None = None; preset: str | None = None
 
 class SayReq(BaseModel):
     scope: str = "broadcast"; recipient: list[str] = []; content: str = ""; skip: bool = False
@@ -35,13 +39,20 @@ class OrdReq(BaseModel):
 
 @app.post("/api/new")
 async def new(r: NewReq):
-    S["game"] = Session(r.human, lang=r.lang, personas=r.personas)
-    asyncio.ensure_future(S["game"].begin_phase())     # warm up; frontend polls
+    personas = None
+    if r.preset and (PRE / f"{r.preset}.json").exists():
+        personas = json.loads((PRE / f"{r.preset}.json").read_text()).get("personas")
+    S["game"] = Session(r.human, lang=r.lang, personas=personas)
+    asyncio.ensure_future(S["game"].begin_phase())
     return S["game"].state()
+
+@app.post("/api/menu_back")      # back to main menu (no config changes mid-game)
+def menu_back():
+    S["game"] = None; return {"mode": "MENU"}
 
 @app.get("/api/state")
 def state():
-    return S["game"].state() if S["game"] else {"mode": "NEW", "phase": "-"}
+    return S["game"].state() if S["game"] else {"mode": "MENU", "phase": "-"}
 
 @app.post("/api/say")
 async def say(r: SayReq):
@@ -63,12 +74,12 @@ async def orders(r: OrdReq):
     return res
 
 @app.post("/api/save")
-def save():
-    return S["game"].save()
+def save(name: str = "auto"):
+    return S["game"].save(name)
 
 @app.post("/api/load")
-async def load():
-    S["game"] = Session.load(); await S["game"].begin_phase(); return S["game"].state()
+async def load(name: str = "auto"):
+    S["game"] = Session.load(name); await S["game"].begin_phase(); return S["game"].state()
 
 @app.get("/api/chronicle")
 def chron():
@@ -124,48 +135,52 @@ def index():
 
 
 INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
-<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}</style>
-<h2>DiploMind — <span id=youl>你</span> <b id=h>FRANCE</b></h2>
-扮演<select id=hsel><option>AUSTRIA<option>ENGLAND<option selected>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY<option value="">观战/Spectate</select>
-<select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select>
-<button onclick=nw()>新局/New</button> <button onclick=guide()>Guide</button>
+<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}</style>
+<div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button><h3>继续 Continue</h3><div id=saves></div></div>
+<div id=setup class=v><h2>新游戏</h2>扮演 <select id=hsel><option>AUSTRIA<option>ENGLAND<option selected>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY<option value="">观战/Spectate</select>
+语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select> 预设 <select id=psel></select>
+<button onclick=nw()>开始 Start</button> <button onclick=toMenu()>返回</button></div>
+<div id=game class=v><h2>DiploMind — <span id=youl>你</span> <b id=h></b></h2>
+<button onclick=save()>存档 Save</button> <button onclick=toMenu()>主菜单</button> <button onclick=guide()>Guide</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
 <h3>中心</h3><div id=c></div>
 <h3>聊天</h3><div id=tabs></div><button onclick=newp()>+私聊</button><div id=log></div>
-<div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过本轮</button> <span class=p id=st></span></div>
+<div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
-<h3>内幕(观战/debug)</h3><button onclick=relo()>刷新关系/背叛</button><button onclick=dbg()>看内脏(意图/记忆/暗盘)</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre>
+<button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div>
 <script>
-let act='群聊',chans={},mphase='',keys='',legal='';     // only touch DOM on change; keep tab/input/selection
-function S(el,v){if(el.textContent!=v)el.textContent=v}    // update only on change
+let act='群聊',chans={},mphase='',keys='',legal='',sent=false,L={};
+function S(el,v){if(el.textContent!=v)el.textContent=v}
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
+function show(v){for(let x of ['menu','setup','game'])document.getElementById(x).className=x==v?'':'v'}
+async function toMenu(){show('menu');let m=await G('/api/menu');await G('/api/menu_back','POST');
+saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\\'ld("'+s+'")\\'>'+s+'</button>').join(' ');
+psel.innerHTML='<option value="">随机</option>'+Object.entries(m.presets).map(([k,v])=>'<option value='+k+'>'+(v.name||k)+'</option>').join('')}
+function toSetup(){show('setup')}
+async function ld(n){L=await G('/api/i18n/zh-Hans');ui();show('game');R(await G('/api/load?name='+n,'POST'))}
 function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}
 async function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=(await G('/api/open','POST',{recipient:p.split(',').map(x=>x.trim())})).channel}
-function R(s){S(ph,s.phase);S(md,s.mode);S(rd,s.round);S(h,s.human||'观战');
+function R(s){if(s.mode=='MENU')return;S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
 if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
-bs.disabled=bk.disabled=t.disabled=!s.your_turn;
-S(st,s.your_turn?L.sp:(s.staged?'⏳ '+s.staged:L.wait));   // staged until all submit
-let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');sent=false;os.disabled=false;ord.querySelector('button').disabled=false}  // new orders phase unlocks
+bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged?'⏳ '+s.staged:L.wait));
+let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');sent=false;os.disabled=false;ord.querySelector('button').disabled=false}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
-let L={};function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
-async function nw(){L=await G('/api/i18n/'+lsel.value);ui();act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value}))}   // one lang = UI + negotiation, text from files
-async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令缩写:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名(简写=全名/中文):\\n'+d.locs.join('\\n')}
-async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠ 不能发空消息';return}
-bs.disabled=bk.disabled=t.disabled=true;st.textContent='发送中…';
+function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
+async function nw(){L=await G('/api/i18n/'+lsel.value);ui();show('game');act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value,preset:psel.value}))}
+async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n,'POST')}
+async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名:\\n'+d.locs.join('\\n')}
+async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;st.textContent='…';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
-let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});
-if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
-let sent=false;async function sub(){let btn=event.target;btn.disabled=os.disabled=sent=true;st.textContent=L.settle;
-await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}   // 锁到下一相
-async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→{'+Object.entries(v).map(([a,t])=>a+':'+t).join(' ')+'}').join('  ');
-let b=await G('/api/betrayals');bet.innerHTML='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act+'('+x.yr+')').join(' | ')||'暂无')}
-async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}   // god view: intent/memory/all incl AI-AI private
-G('/api/i18n/zh-Hans').then(d=>{L=d;ui()});setInterval(async()=>{R(await G('/api/state'))},2000)</script>"""
+let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
+async function sub(){let b=event.target;b.disabled=os.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}
+async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→'+JSON.stringify(v)).join(' ');let b=await G('/api/betrayals');bet.textContent='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act).join(' | ')||'无')}
+async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}
+toMenu();setInterval(async()=>{let s=await G('/api/state');if(s.mode!='MENU')R(s)},2000)</script>"""
