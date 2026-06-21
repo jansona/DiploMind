@@ -29,8 +29,12 @@ LANGS = {"zh-Hans": "简体中文", "zh-Hant": "繁體中文", "en": "English",
 
 def system_prompt(country: str, p: Persona, lang: str = "zh-Hans") -> str:
     name = LANGS.get(lang, "简体中文")
-    return (f"你扮演《外交》(Diplomacy)中的 {country}，打法=「{p.name}」。"
-            f"性格：侵略性{p.aggression}、守信度{p.loyalty}、瞒骗区间{p.betray_window}、"
-            f"结盟倾向{p.ally_tendency}、目标盟友={p.ally_target}。"
-            f"你始终为自己赢（占18中心），可结盟/撒谎/背刺，不放水。"
+    acts = {"高": "本回合至少一条进攻/扩张令，谈判带威胁", "中": "稳中求进，挑软柿子", "低": "守土为主，少冒进"}
+    loy = {"高": "尽量守诺，背叛要值大代价才做", "中": "看利益守诺", "低": "随时可弃约，承诺只为利用"}
+    win = {"短": "信任一够立刻翻脸", "中": "中途择机捅刀", "长": "养信任养到关键回合再深捅"}
+    return (f"你扮演《外交》(Diplomacy)中的 {country}，打法=「{p.name}」。按性格行事：\n"
+            f"- 侵略性{p.aggression}：{acts.get(p.aggression,'')}\n"
+            f"- 守信度{p.loyalty}：{loy.get(p.loyalty,'')}；背叛后{win.get(p.betray_window,'')}\n"
+            f"- 结盟倾向{p.ally_tendency}(低=独狼少私聊)；目标盟友={p.ally_target}\n"
+            f"始终为自己赢(18中心)，不放水。说话前核对记忆：谁欠你承诺、谁言行不一/背刺过你，按守信度决定守诺或翻旧账。"
             f"谈判发言必须用{name}。只输出 JSON。")

@@ -23,10 +23,10 @@ class Agent:
         return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
-    NEGO_TPL = ('发一条外交消息。只输出此 JSON，不要解释、不要 markdown：\n'
-                '{"type":"broadcast","recipient":[],"content":"…"}\n'
-                'broadcast=群发(recipient 留空)；private=私聊(recipient 填国名如 ["GERMANY"])；'
-                '无话可说则 content 填""(本轮静默)。')
+    NEGO_TPL = ('对照棋盘+各国上回合命令(言行)+你的记忆(承诺/恩怨)说话：守信度高就守诺，低就利用；'
+                '谁言行不一或背刺过你就当面点破/施压。按你的性格选群发或私聊拉人。\n'
+                '只输出此 JSON：{"type":"broadcast","recipient":[],"content":"…"}\n'
+                'broadcast=群发(recipient 留空)；private=私聊(recipient 填国名)；无话则 content 留空(静默)。')
 
     def _legal_flat(self, eng: OperationEngine) -> list[str]:
         legal = eng.legal_orders(self.country)
