@@ -13,7 +13,7 @@ from pathlib import Path
 from .agent import Agent
 from .bus import MessageBus
 from .config import load as load_config
-from .chronicle import generate
+from .chronicle import generate, summarize_year
 from .engine import OperationEngine
 from .gateway import Gateway
 from .personalities import PERSONAS
@@ -128,7 +128,11 @@ class Session:
                 self.mode = "ORDERS"; return {"phase": nxt, "build": True, "end": None}
             self.eng.auto_resolve(); nxt = self.eng.process()
         log.info("结算 -> %s", nxt)
-        self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
+        pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
+        try:                                              # AI yearly summary (alliances/enmities/troops), same LLM
+            self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
+        except Exception:
+            self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()
         for a in self.ai.values(): a.mem.tick()
         return {"phase": nxt, "end": self.eng.check_end(self.max_year)}

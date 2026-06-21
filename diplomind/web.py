@@ -157,7 +157,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <h3>编年史</h3><div id=ch></div>
 <div id=inside class=v><button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
 <script>
-let act='群聊',chans={},mphase='',keys='',legal='',sent=false,L={};
+let act='群聊',chans={},mphase='',keys='',legal='',sent=false,L={},seen={},unread={};
 function S(el,v){if(el.textContent!=v)el.textContent=v}
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
 function show(v){for(let x of ['menu','setup','game'])document.getElementById(x).className=x==v?'':'v'}
@@ -166,28 +166,30 @@ saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\\'ld
 psel.innerHTML='<option value="">随机</option>'+Object.entries(m.presets).map(([k,v])=>'<option value='+k+'>'+(v.name||k)+'</option>').join('')}
 function toSetup(){show('setup')}
 async function ld(n){L=await G('/api/i18n/zh-Hans');ui();show('game');R(await G('/api/load?name='+n,'POST'))}
-function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}
-async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;act=(await G('/api/open','POST',{recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false)}
+function pick(k){act=k;unread[k]=0;seen[k]=(chans[k]||[]).length;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==k?'on':'')}
+async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;let ch=(await G('/api/open','POST',{recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false);keys='';pick(ch)}
 function R(s){if(s.mode=='MENU')return;inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
 if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
+for(let k in chans){let n=chans[k].length;if(k!=act&&seen[k]!=undefined&&n>seen[k])unread[k]=1;}
 if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
-log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
+[...tabs.children].forEach(b=>{let k=b.textContent.replace(/ ✦/,'');b.textContent=k+(unread[k]?' ✦':'')});
+log.textContent=(chans[act]||[]).join('\\n')||'(空)';seen[act]=(chans[act]||[]).length;[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
-bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged?'⏳ '+s.staged:L.wait));
+bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳ AI思考中…'));
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';sent=false;ord.querySelector('button').disabled=false}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
 async function nw(){L=await G('/api/i18n/'+lsel.value);ui();show('game');act='群聊';keys='';legal='';pk.innerHTML='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value,preset:psel.value}))}
 async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n,'POST')}
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名:\\n'+d.locs.join('\\n')}
-async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;st.textContent='…';
+async function say(sk){if(t.disabled)return;if(sk&&!confirm('跳过本轮不发言?'))return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;st.textContent='…';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
 function oupd(){osel.textContent=[...os.querySelectorAll(':checked')].map(c=>c.value).join('; ')||'(无)'}
-async function sub(){let b=event.target;b.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:[...os.querySelectorAll(':checked')].map(x=>x.value)})}
+async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部单位将原地?'))return;let b=event.target;b.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:o})}
 async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→'+JSON.stringify(v)).join(' ');let b=await G('/api/betrayals');bet.textContent='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act).join(' | ')||'无')}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}
 toMenu();setInterval(async()=>{let s=await G('/api/state');if(s.mode!='MENU')R(s)},2000)</script>"""
