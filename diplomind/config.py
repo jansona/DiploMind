@@ -13,7 +13,7 @@ class Config:
     api_key: str = "ollama"
     model: str = "qwen3.5:4b"
     api: str = "ollama"                          # "ollama" (native /api/chat) or "openai" (/chat/completions)
-    rounds: int = 3                              # negotiation rounds per phase
+    rounds: int = 5                              # negotiation rounds per phase
     lang: str = "zh-Hans"
     concurrency: int = 3
     human: str = "FRANCE"                         # which power the human plays; null = all-AI spectate

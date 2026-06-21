@@ -148,7 +148,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <h3>中心</h3><div id=c></div>
 <h3>聊天</h3><div id=tabs></div><button onclick=newp()>+私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span></div>
-<div id=ord style=display:none><select id=os multiple size=8></select><br><button onclick=sub()>下令并结算</button></div>
+<div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
 <button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div>
 <script>
@@ -171,7 +171,7 @@ log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged?'⏳ '+s.staged:L.wait));
-let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<option>'+o+'</option>').join('');sent=false;os.disabled=false;ord.querySelector('button').disabled=false}
+let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=osel.textContent=[...os.querySelectorAll(":checked")].map(c=>c.value).join("; ")> '+o+'</label><br>').join('');osel.textContent='';sent=false;ord.querySelector('button').disabled=false}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
 async function nw(){L=await G('/api/i18n/'+lsel.value);ui();show('game');act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value,preset:psel.value}))}
@@ -180,7 +180,7 @@ async function guide(){if(gv.style.display!='none'){gv.style.display='none';retu
 async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;st.textContent='…';
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
-async function sub(){let b=event.target;b.disabled=os.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:[...os.selectedOptions].map(x=>x.value)})}
+async function sub(){let b=event.target;b.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:[...os.querySelectorAll(':checked')].map(x=>x.value)})}
 async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→'+JSON.stringify(v)).join(' ');let b=await G('/api/betrayals');bet.textContent='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act).join(' | ')||'无')}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}
 toMenu();setInterval(async()=>{let s=await G('/api/state');if(s.mode!='MENU')R(s)},2000)</script>"""
