@@ -19,7 +19,8 @@ class Agent:
         g = eng.game
         units = {p: g.powers[p].units for p in eng.active_powers}  # all units: rivals' scale matters for talks
         cen = eng.centers()
-        return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n"
+        last = eng.last_orders()                                    # everyone's deeds last phase: compare to their words
+        return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
     NEGO_TPL = ('发一条外交消息。只输出此 JSON，不要解释、不要 markdown：\n'

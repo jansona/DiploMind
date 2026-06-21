@@ -61,6 +61,12 @@ class OperationEngine:
         self.game.set_orders(power, res.accepted)
         return res
 
+    def last_orders(self) -> dict[str, list[str]]:
+        """Most recent processed phase's orders per power — words vs deeds for AI perception."""
+        oh = self.game.order_history
+        last = list(oh.values())[-1] if oh else {}
+        return {p: list(v) for p, v in last.items() if v}
+
     def phase_type(self) -> str:
         return self.game.phase_type   # M=Movement R=Retreat A=Adjustment(build)
 

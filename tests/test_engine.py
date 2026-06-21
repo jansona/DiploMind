@@ -33,3 +33,9 @@ def test_neutral_and_endcheck():
     assert len(eng.dummy_powers) == 6                 # 1 活 6 中立
     end = eng.check_end(max_year=1900)
     assert end["draw"] and end["survivors"]           # 到上限 → 存活玩家和局
+
+
+def test_last_orders():
+    eng = OperationEngine(["FRANCE"])
+    eng.submit("FRANCE", ["A PAR - BUR"]); eng.process()
+    assert eng.last_orders().get("FRANCE") == ["A PAR - BUR"]   # 上回合命令可感知
