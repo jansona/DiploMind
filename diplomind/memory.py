@@ -99,3 +99,9 @@ class Memory:
                 "ledger": [asdict(c) for c in self.ledger],
                 "actions": [asdict(a) for a in self.actions],
                 "diary": self.diary, "summary": self._summary}
+
+    def restore(self, snap: dict) -> None:               # load saved memory (relations/ledger/actions/diary)
+        self.relations = {k: Relation(**v) for k, v in snap.get("relations", {}).items()}
+        self.ledger = [Commitment(**c) for c in snap.get("ledger", [])]
+        self.actions = [Action(**a) for a in snap.get("actions", [])]
+        self.diary = snap.get("diary", []); self._summary = snap.get("summary", "")

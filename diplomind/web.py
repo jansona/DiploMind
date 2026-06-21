@@ -1,4 +1,4 @@
-"""Web 前端 — 全员对等轮次同步: 你发/跳, 6AI 自主并发, 谁没发可见, 满5轮/静默转下令。
+"""Web 前端 — 全员对等轮次同步: 你发/跳, 6AI 自主并发, 谁没发可见, 满N轮/静默转下令。
 CC 测不了浏览器→端点 TestClient 测, 手测见 RESULTS.md。地图 SVG 二期。"""
 from __future__ import annotations
 
@@ -58,7 +58,8 @@ def open_private(r: PrivReq):
 @app.post("/api/orders")
 async def orders(r: OrdReq):
     res = await S["game"].submit(r.orders)
-    asyncio.ensure_future(S["game"].begin_phase())
+    if not res.get("build"):                         # build phase: human still ordering, don't start negotiation
+        asyncio.ensure_future(S["game"].begin_phase())
     return res
 
 @app.post("/api/save")

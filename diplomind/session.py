@@ -38,10 +38,10 @@ class Session:
                           api=cfg.api, concurrency=cfg.concurrency, timeout=cfg.timeout)
         self.eng = OperationEngine(POWERS)
         keys = list(PERSONAS); random.shuffle(keys)                     # random by default; personas can fix per power
-        chosen = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
-        self.persona_of = {c: PERSONAS[chosen[c]].name for c in POWERS if c != self.human}  # human has no persona
-        self.players = {c: (HumanPlayer(c) if c == human else
-                            AIPlayer(Agent(c, PERSONAS[chosen[c]], self.gw, self.lang)))
+        self.persona_key = {c: (personas or {}).get(c, keys[i]) for i, c in enumerate(POWERS)}
+        self.persona_of = {c: PERSONAS[self.persona_key[c]].name for c in POWERS if c != self.human}  # human has no persona
+        self.players = {c: (HumanPlayer(c) if c == self.human else      # compare self.human, not raw arg
+                            AIPlayer(Agent(c, PERSONAS[self.persona_key[c]], self.gw, self.lang)))
                         for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
@@ -147,15 +147,18 @@ class Session:
 
     def save(self) -> dict:                              # save: board+chronicle+memories
         blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
-                "chronicle": self.chronicle, "persona": self.persona_of,
+                "chronicle": self.chronicle, "persona_key": self.persona_key,
                 "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
         self.SAVE.write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": str(self.SAVE)}
 
     @classmethod
     def load(cls) -> "Session":
         b = json.loads(cls.SAVE.read_text())
-        s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans")); s.eng.load(b["board"]); s.chronicle = b["chronicle"]
-        s.persona_of = b["persona"]
+        s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))  # same personas
+        s.eng.load(b["board"]); s.chronicle = b["chronicle"]
+        for c, snap in (b.get("mem") or {}).items():     # restore AI memory (relations/actions/diary)
+            if c in s.ai:
+                s.ai[c].mem.restore(snap)
         return s
 
     def state(self) -> dict:

@@ -15,7 +15,7 @@ turn on you when the board says so.
 
 ## How it works
 - **Synchronous rounds**: every power drafts one message per round (broadcast or
-  private), all delivered together; a fully silent round (or the 5-round cap)
+  private), all delivered together; a fully silent round (or the round cap, default 3)
   ends negotiation, then everyone orders. Humans and AIs share the same flow —
   only the input differs (UI vs LLM).
 - **Hidden personas** drive 7 play styles; betraying an ally tanks trust and is
