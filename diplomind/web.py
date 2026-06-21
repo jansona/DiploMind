@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from pathlib import Path
+
+DEBUG = bool(os.getenv("DIPLOMIND_DEBUG"))     # off: hide trust/internals (inner thoughts); on: show
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
@@ -52,7 +55,8 @@ def menu_back():
 
 @app.get("/api/state")
 def state():
-    return S["game"].state() if S["game"] else {"mode": "MENU", "phase": "-"}
+    s = S["game"].state() if S["game"] else {"mode": "MENU", "phase": "-"}
+    s["debug"] = DEBUG; return s
 
 @app.post("/api/say")
 async def say(r: SayReq):
@@ -85,20 +89,21 @@ async def load(name: str = "auto"):
 def chron():
     return {"text": book(S["game"].chronicle) if S["game"] else ""}
 
-@app.get("/api/relations")        # relations: trust
+@app.get("/api/relations")        # relations: trust (debug only)
 def relations():
-    g = S["game"]; return {c: {k: v.trust for k, v in a.mem.relations.items()} for c, a in g.ai.items()} if g else {}
+    g = S["game"]; return {c: {k: v.trust for k, v in a.mem.relations.items()} for c, a in g.ai.items()} if g and DEBUG else {}
 
-@app.get("/api/betrayals")         # betrayal highlights
+@app.get("/api/betrayals")         # betrayal highlights (debug only)
 def betrayals():
     g = S["game"]
+    if not DEBUG: return {"items": []}
     return {"items": [{"who": c, "by": a.actor, "act": a.action, "yr": a.round}
                       for c, ag in (g.ai.items() if g else []) for a in ag.mem.actions if a.betray]}
 
-@app.get("/api/snapshot")          # debug god view: persona+intent+memory+private
+@app.get("/api/snapshot")          # debug god view: persona+intent+memory+private (debug only)
 def snap():
     g = S["game"]
-    if not g: return {}
+    if not g or not DEBUG: return {}
     return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
 
 import re as _re
@@ -150,7 +155,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
-<button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div>
+<div id=inside class=v><button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
 <script>
 let act='群聊',chans={},mphase='',keys='',legal='',sent=false,L={};
 function S(el,v){if(el.textContent!=v)el.textContent=v}
@@ -163,7 +168,7 @@ function toSetup(){show('setup')}
 async function ld(n){L=await G('/api/i18n/zh-Hans');ui();show('game');R(await G('/api/load?name='+n,'POST'))}
 function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}
 async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;act=(await G('/api/open','POST',{recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false)}
-function R(s){if(s.mode=='MENU')return;S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');
+function R(s){if(s.mode=='MENU')return;inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
 if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
