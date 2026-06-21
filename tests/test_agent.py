@@ -38,3 +38,11 @@ async def test_attitude_update():
     ag, eng = _ag()
     await ag.a_update(eng)
     assert ag.mem.relation("GERMANY").trust == -60
+
+
+def test_stab_cue_when_due():
+    ag, eng = _ag()
+    ag.mem.intent = {"target": "GERMANY", "move_turn": 1901}
+    assert "GERMANY" in ag._stab_cue(eng) and "背刺" in ag._stab_cue(eng)   # 到点提示捅刀
+    ag.mem.intent = {"target": "GERMANY", "move_turn": 1905}
+    assert ag._stab_cue(eng) == ""                                          # 未到不提示
