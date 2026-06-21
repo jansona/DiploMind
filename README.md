@@ -8,6 +8,15 @@ great power against six AI opponents — each with a hidden persona — that pur
 their own victory, keep memory of who kept promises and who stabbed them, and
 turn on you when the board says so.
 
+## Quick start
+```bash
+ollama serve && ollama pull qwen3.5:4b              # 1. local model
+uv sync                                             # 2. deps (Python 3.11)
+uv run uvicorn diplomind.web:app --port 8731        # 3. open http://localhost:8731
+```
+Pick your country + language on the start screen, then play. Config file optional
+(`DIPLOMIND_CONFIG=conf/example.json` for non-ollama OpenAI-compatible APIs).
+
 ## Play modes
 - **Human vs AI** — you take one power, six AI fill the rest.
 - **Mixed** — any subset human, the rest AI; the round flow is identical for all.
