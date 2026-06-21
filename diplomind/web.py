@@ -146,7 +146,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
 <h3>中心</h3><div id=c></div>
-<h3>聊天</h3><div id=tabs></div><button onclick=newp()>+私聊</button><div id=log></div>
+<h3>聊天</h3><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span></div>
 <div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
@@ -162,9 +162,10 @@ psel.innerHTML='<option value="">随机</option>'+Object.entries(m.presets).map(
 function toSetup(){show('setup')}
 async function ld(n){L=await G('/api/i18n/zh-Hans');ui();show('game');R(await G('/api/load?name='+n,'POST'))}
 function pick(k){act=k;log.textContent=(chans[k]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==k?'on':'')}
-async function newp(){let p=prompt('私聊对象(逗号,如 GERMANY,ITALY)');if(!p)return;act=(await G('/api/open','POST',{recipient:p.split(',').map(x=>x.trim())})).channel}
+async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;act=(await G('/api/open','POST',{recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false)}
 function R(s){if(s.mode=='MENU')return;S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
+if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
 if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\\'pick("'+k+'")\\'>'+k+'</button>').join('')}
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent==act?'on':'');
@@ -174,7 +175,7 @@ bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged?
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=osel.textContent=[...os.querySelectorAll(":checked")].map(c=>c.value).join("; ")> '+o+'</label><br>').join('');osel.textContent='';sent=false;ord.querySelector('button').disabled=false}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
-async function nw(){L=await G('/api/i18n/'+lsel.value);ui();show('game');act='群聊';keys='';legal='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value,preset:psel.value}))}
+async function nw(){L=await G('/api/i18n/'+lsel.value);ui();show('game');act='群聊';keys='';legal='';pk.innerHTML='';R(await G('/api/new','POST',{human:hsel.value,lang:lsel.value,preset:psel.value}))}
 async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n,'POST')}
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\\n')+'\\n\\n地名:\\n'+d.locs.join('\\n')}
 async function say(sk){if(t.disabled)return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;st.textContent='…';
