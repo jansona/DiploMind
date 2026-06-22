@@ -1,5 +1,14 @@
 """P1 记忆库单测：背叛降信任、承诺到期失效、长局上下文不膨胀。"""
 from diplomind.memory import Memory
+from diplomind.schemas import AttitudeUpdate
+
+
+def test_attitude_update_parses_attitudes():
+    """LLM 返回 trust+attitude，二者都解析，态度不再永远中立。"""
+    u = AttitudeUpdate(scores={"GERMANY": -50}, attitudes={"GERMANY": "叛徒"})
+    assert u.scores["GERMANY"] == -50 and u.attitudes["GERMANY"] == "叛徒"
+    nested = AttitudeUpdate(scores={"ITALY": {"trust": 30, "attitude": "盟友"}})   # 兼容嵌套形
+    assert nested.scores["ITALY"] == 30
 
 
 def test_betrayal_lowers_trust():

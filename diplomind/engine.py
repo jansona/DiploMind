@@ -6,10 +6,13 @@ random moves.
 """
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Iterable
 
 from diplomacy import Game
+
+log = logging.getLogger("diplomind")
 
 
 @dataclass
@@ -58,6 +61,8 @@ class OperationEngine:
                 res.accepted.append(o)
             else:
                 res.rejected.append((o, "not in legal_orders"))
+        if res.rejected:                                  # illegal=hold, but log so it's debuggable
+            log.warning("非法令丢弃 %s -> hold: %s", power, [o for o, _ in res.rejected])
         self.game.set_orders(power, res.accepted)
         return res
 

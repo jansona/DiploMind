@@ -43,10 +43,14 @@ class Agent:
 
     # all steps async (AI concurrent; humans do these mentally)
     async def a_update(self, eng: OperationEngine, inbox: str = "") -> AttitudeUpdate | None:
-        prompt = self.perceive(eng, inbox) + '\n据近况评各国信任分。scores 为字典: {"国名": -100到100}。'
+        prompt = (self.perceive(eng, inbox) + '\n据近况评各国信任分与定性。'
+                  'scores 字典 {"国名":-100到100}；attitudes 字典 {"国名":"盟友/敌对/中立等一句话"}。')
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], AttitudeUpdate, tag=f"{self.country}:attitude")
         if out:
-            self.mem.apply_attitude({c: {"trust": t} for c, t in out.scores.items()})
+            merged = {c: {"trust": t} for c, t in out.scores.items()}
+            for c, a in out.attitudes.items():
+                merged.setdefault(c, {})["attitude"] = a
+            self.mem.apply_attitude(merged)
         return out
 
     async def a_intent(self, eng: OperationEngine) -> Intent | None:

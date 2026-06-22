@@ -2,21 +2,20 @@
 CC 测不了浏览器→端点 TestClient 测, 手测见 RESULTS.md。地图 SVG 二期。"""
 from __future__ import annotations
 
-import asyncio
 import json
 import os
 from pathlib import Path
 
 DEBUG = bool(os.getenv("DIPLOMIND_DEBUG"))     # off: hide trust/internals (inner thoughts); on: show
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from .chronicle import book
 from .debugpanel import snapshot
 from .names import PROVINCES
-from .session import Session
+from .session import Session, spawn
 
 app = FastAPI(title="DiploMind")
 S: dict = {"game": None}
@@ -43,10 +42,11 @@ class OrdReq(BaseModel):
 @app.post("/api/new")
 async def new(r: NewReq):
     personas = None
-    if r.preset and (PRE / f"{r.preset}.json").exists():
-        personas = json.loads((PRE / f"{r.preset}.json").read_text()).get("personas")
+    pf = (PRE / f"{Path(r.preset).name}.json") if r.preset else None   # basename: block ../ traversal
+    if pf and pf.exists():
+        personas = json.loads(pf.read_text()).get("personas")
     S["game"] = Session(r.human, lang=r.lang, personas=personas)
-    asyncio.ensure_future(S["game"].begin_phase())
+    spawn(S["game"].begin_phase())
     return S["game"].state()
 
 @app.post("/api/menu_back")      # back to main menu (no config changes mid-game)
@@ -74,7 +74,7 @@ def open_private(r: PrivReq):
 async def orders(r: OrdReq):
     res = await S["game"].submit(r.orders)
     if not res.get("build"):                         # build phase: human still ordering, don't start negotiation
-        asyncio.ensure_future(S["game"].begin_phase())
+        spawn(S["game"].begin_phase())
     return res
 
 @app.post("/api/save")
@@ -83,7 +83,11 @@ def save(name: str = "auto"):
 
 @app.post("/api/load")
 async def load(name: str = "auto"):
-    S["game"] = Session.load(name); await S["game"].begin_phase(); return S["game"].state()
+    try:
+        S["game"] = Session.load(name)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"存档不存在: {name}")
+    await S["game"].begin_phase(); return S["game"].state()
 
 @app.get("/api/chronicle")
 def chron():

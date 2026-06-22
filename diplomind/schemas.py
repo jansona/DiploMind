@@ -26,8 +26,9 @@ class Intent(BaseModel):
 
 
 class AttitudeUpdate(BaseModel):
-    """Accept {country: score} dict; also list/null, normalized."""
+    """Accept {country: score} or {country: {trust, attitude}}; also list/null, normalized."""
     scores: dict[str, int] = Field(default_factory=dict, description='如 {"GERMANY": -50}')
+    attitudes: dict[str, str] = Field(default_factory=dict, description='如 {"GERMANY": "盟友"}，一句话定性')
 
     @field_validator("scores", mode="before")
     @classmethod
@@ -38,11 +39,19 @@ class AttitudeUpdate(BaseModel):
             return {}
         out = {}
         for k, n in v.items():
+            n = n.get("trust", 0) if isinstance(n, dict) else n  # {国:{trust,attitude}} → 取分
             try:
                 out[k] = int(n)
             except (TypeError, ValueError):
                 out[k] = 0                                       # null/坏 → 0
         return out
+
+    @field_validator("attitudes", mode="before")
+    @classmethod
+    def _att(cls, v):
+        if not isinstance(v, dict):
+            return {}
+        return {k: str(a) for k, a in v.items() if a is not None}
 
 
 class OrderSet(BaseModel):

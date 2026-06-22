@@ -38,13 +38,13 @@ class HumanPlayer(Player):
         self._orders: asyncio.Future | None = None
 
     async def negotiate(self, eng, inbox):
-        self._msg = asyncio.get_event_loop().create_future()
+        self._msg = asyncio.get_running_loop().create_future()
         return await self._msg
     def submit_msg(self, m: Message | None):
         if self._msg and not self._msg.done(): self._msg.set_result(m)
 
     async def decide(self, eng):
-        self._orders = asyncio.get_event_loop().create_future()
+        self._orders = asyncio.get_running_loop().create_future()
         return await self._orders
     def submit_orders(self, o: list[str]):
         if self._orders and not self._orders.done(): self._orders.set_result(o)
