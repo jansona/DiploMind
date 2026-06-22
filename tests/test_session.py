@@ -54,3 +54,12 @@ async def test_skip_and_full_to_orders():
     assert s.mode == "ORDERS" and len(s.legal()) > 0
     res = await s.submit(["A PAR - BUR", "A PAR - MOON"])
     assert res["phase"] != "S1901M" and s.mode == "NEGO"
+
+
+@pytest.mark.asyncio
+async def test_spectate_auto_advances():
+    s = _sess(); s.human = None; s.humans = []
+    s.players = {c: s.players[c] for c in s.ai}        # all AI
+    await s.begin_phase()
+    for _ in range(20): await _tick()
+    assert s.eng.phase() != "S1901M"                    # 观战无人, 自动推进相

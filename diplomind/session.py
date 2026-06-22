@@ -107,8 +107,15 @@ class Session:
         self.round += 1; self._cog = True            # cognition once per phase
         if self.round > self.rounds or self.bus.round_silent(self.round - 1):
             self.mode = "ORDERS"; log.info("转下令")
+            if not self.human:                            # all-AI spectate: auto-settle + next phase
+                spawn(self._auto_spectate())
         else:
             self._start_round()
+
+    async def _auto_spectate(self) -> None:
+        await self.submit([])
+        if not self.eng.is_done() and not self.eng.check_end(self.max_year):
+            await self.begin_phase()
 
     def open_private(self, recipients) -> str:
         key = "·".join(sorted({self.human, *[r.upper() for r in recipients]})); self._opened.add(key); return key
