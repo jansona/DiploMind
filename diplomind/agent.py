@@ -23,8 +23,10 @@ class Agent:
         return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
-    NEGO_TPL = ('对照棋盘+各国上回合命令(言行)+你的记忆(承诺/恩怨)说话：守信度高就守诺，低就利用；'
-                '谁言行不一或背刺过你就当面点破/施压。收到私聊优先私聊回复发件人，别只群发。按性格选群发或私聊拉人。\n'
+    NEGO_TPL = ('像真人谈判：一两句话讲清意图(结盟/交易/威胁/妥协)即可，别长篇大论，口吻自然。\n'
+                '关键：单干赢不了——多数进攻要拉盟友互相 support 才能破防；主动结盟、约互保、瓜分弱国，无接壤就先攀邻国关系。\n'
+                '对照棋盘+各国上回合命令(言行)+记忆(承诺/恩怨)：守信高就守诺、低就利用；谁言行不一或背刺过你当面点破/施压。'
+                '收到私聊优先私聊回发件人，别只群发；按性格选群发或私聊拉人。\n'
                 '只输出此 JSON：{"type":"broadcast","recipient":[],"content":"…"}\n'
                 'broadcast=群发(recipient 留空)；private=私聊(recipient 填国名)；无话则 content 留空(静默)。')
 
@@ -35,6 +37,7 @@ class Agent:
     def _order_prompt(self, eng: OperationEngine, flat: list[str]) -> str:
         n = len(eng.legal_orders(self.country))
         return (self.perceive(eng) + f"\n意图:{self.mem.intent}\n你是 {self.country}，仅指挥自己 {n} 个单位。"
+                f"进攻多需配合: 主攻方向用 S 支援自己或盟友, 单兵硬冲常 bounce。"
                 f"从下列合法命令逐字复制，每单位恰好一条，共 {n} 条放入 orders 数组(只放命令字符串)：\n"
                 + "\n".join(flat) + f'\n示例:{{"orders":["{flat[0]}"],"reasoning":"一句话"}}')
 
@@ -55,7 +58,8 @@ class Agent:
 
     async def a_intent(self, eng: OperationEngine) -> Intent | None:
         prev = f"上回合意图(延续微调):{self.mem.intent}\n" if self.mem.intent else ""
-        msgs = [self.sys, {"role": "user", "content": prev + self.perceive(eng) + "\n定本回合隐藏意图。"}]
+        msgs = [self.sys, {"role": "user", "content": prev + self.perceive(eng)
+                + "\n定本回合隐藏意图。务必锁定盟友: 进攻前先找可互保的邻国, 用 support 集火破防; 孤狼难赢, ally 字段尽量填具体国名。"}]
         out = await self.gw.achat(msgs, Intent, tag=f"{self.country}:intent")
         if out:
             self.mem.intent = out.model_dump()

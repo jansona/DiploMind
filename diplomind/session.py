@@ -208,11 +208,13 @@ class Session:
         return s
 
     def state(self) -> dict:
-        chans = self.bus.channels(self.human, self.round) if self.human else {}
+        chans = self.bus.channels(self.human, self.round)   # spectate(human=None): privates auto-hidden, 群聊 visible
         for k in self._opened: chans.setdefault(k, [])
         return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
                 "sent": len(self._hmsgs.get(self.human, [])), "staged": "已发%d/3" % len(self._hmsgs.get(self.human, [])),
+                "msgs_left": max(0, self.MSGS_PER_ROUND - len(self._hmsgs.get(self.human, []))),  # remaining this round
+                "staged_msgs": [m.content for m in self._hmsgs.get(self.human, [])],  # this round's pending msgs (delivered at round end)
                 "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # persona hidden; debug only
                 "phase_type": self.eng.phase_type(),
                 # ORDERS phase: who still owes orders (human until submit; 6 AI decide on submit)

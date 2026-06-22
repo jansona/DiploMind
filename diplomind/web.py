@@ -144,7 +144,7 @@ def index():
 
 
 INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
-<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}</style>
+<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}#ch{white-space:pre-wrap}select{width:100%}.p{color:#c60}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}</style>
 <div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button><h3>继续 Continue</h3><div id=saves></div></div>
 <div id=setup class=v><h2>新游戏</h2>扮演 <select id=hsel><option>AUSTRIA<option>ENGLAND<option selected>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY<option value="">观战/Spectate</select>
 语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select> 预设 <select id=psel></select>
@@ -156,7 +156,7 @@ INDEX = """<!doctype html><meta charset=utf-8><title>DiploMind</title>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
 <h3>中心</h3><div id=c></div>
 <h3>聊天</h3><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
-<div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span></div>
+<div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span><div id=stg class=p></div></div>
 <div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
 <h3>编年史</h3><div id=ch></div>
 <div id=inside class=v><button onclick=relo()>关系/背叛</button><button onclick=dbg()>看内脏</button><div id=rel></div><div id=bet></div><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
@@ -182,7 +182,8 @@ if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\
 log.textContent=(chans[act]||[]).join('\\n')||'(空)';seen[act]=(chans[act]||[]).length;[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==act?'on':'');
 nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
 S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
-bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp:(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳ AI思考中…'));
+bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp+' ('+(s.msgs_left==undefined?3:s.msgs_left)+'条可发)':(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳ AI思考中…'));
+S(stg,(s.staged_msgs&&s.staged_msgs.length)?'📝本轮待投递('+s.staged_msgs.length+'/3,轮末统一送达): '+s.staged_msgs.join(' | '):'');
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';sent=false;ord.querySelector('button').disabled=false}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map').then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle').then(d=>ch.textContent=d.text)}}
 function ui(){youl.textContent=L.you;bs.textContent=L.send;bk.textContent=L.skip;ord.querySelector('button').textContent=L.sub}
@@ -193,7 +194,8 @@ async function say(sk){if(t.disabled)return;if(sk&&!confirm('跳过本轮不发�
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{scope,recipient:to,content:t.value,skip:!!sk});if(!r.ok){st.textContent='⚠ '+r.reason;R(r.state)}else{t.value='';R(r.state)}}
 function oupd(){osel.textContent=[...os.querySelectorAll(':checked')].map(c=>c.value).join('; ')||'(无)'}
-async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部单位将原地?'))return;let b=event.target;b.disabled=sent=true;st.textContent=L.settle;await G('/api/orders','POST',{orders:o})}
+async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部单位将原地?'))return;let b=event.target;b.disabled=sent=true;os.querySelectorAll('input').forEach(c=>c.disabled=true);st.textContent=L.settle;await G('/api/orders','POST',{orders:o})}
 async function relo(){if(rel.textContent){rel.textContent='';bet.textContent='';return}let r=await G('/api/relations');rel.textContent='关系: '+Object.entries(r).map(([k,v])=>k+'→'+JSON.stringify(v)).join(' ');let b=await G('/api/betrayals');bet.textContent='背叛: '+(b.items.map(x=>x.who+'被'+x.by+x.act).join(' | ')||'无')}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot'),null,1)}
-toMenu();setInterval(async()=>{let s=await G('/api/state');if(s.mode!='MENU')R(s)},2000)</script>"""
+async function init(){let s=await G('/api/state');if(s.mode&&s.mode!='MENU'){L=await G('/api/i18n/'+(s.lang||'zh-Hans'));ui();show('game');R(s)}else toMenu()}
+init();setInterval(async()=>{let s=await G('/api/state');if(s.mode!='MENU')R(s)},2000)</script>"""
