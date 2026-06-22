@@ -13,6 +13,19 @@ def test_save_load_roundtrip():
     assert len(s2.persona_of) == 6 and "FRANCE" not in s2.persona_of   # 人扮法国, 6AI有性格
 
 
+def test_safe_name_blocks_traversal():
+    """存档名净化: ../ 与坏字符被剥成 basename 白名单, 不逃出 saves。"""
+    assert Session._safe_name("../../etc/passwd") == "passwd"
+    assert Session._safe_name("../auto") == "auto"
+    assert "/" not in Session._safe_name("a/b/c") and Session._safe_name("") == "auto"
+
+
+def test_load_missing_raises():
+    import pytest
+    with pytest.raises(FileNotFoundError):
+        Session.load("__no_such_save__")
+
+
 def test_persona_random():
     a = Session(None).persona_of; b = Session(None).persona_of
     assert set(a.values()) and (a != b or True)     # 随机分配(可能偶同, 只验都赋值)

@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import random
+import re
 from pathlib import Path
 
 from .agent import Agent
@@ -25,6 +26,12 @@ logging.basicConfig(level=logging.DEBUG if os.getenv("DIPLOMIND_DEBUG") else log
                     format="%(asctime)s %(levelname)s %(message)s")
 POWERS = ["AUSTRIA", "ENGLAND", "FRANCE", "GERMANY", "ITALY", "RUSSIA", "TURKEY"]
 MAX_ROUNDS = 3
+
+
+def spawn(coro):                                         # fire-and-forget but surface crashes, don't fail silently
+    t = asyncio.ensure_future(coro)
+    t.add_done_callback(lambda f: f.cancelled() or f.exception() and log.error("后台任务异常: %s", f.exception()))
+    return t
 
 
 class Session:
@@ -61,7 +68,7 @@ class Session:
         self._done = {}; self._hmsgs = {}                # per-round submissions (human up to 3 msgs)
         ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
         for c, p in self.ai.items():
-            asyncio.ensure_future(self._run(c, p, ib[c]))   # AIs draft in parallel
+            spawn(self._run(c, p, ib[c]))   # AIs draft in parallel
 
     async def _run(self, c, agent, inbox):
         if not self._cog: await agent.a_update(self.eng); await agent.a_intent(self.eng)  # private cognition, parallel to human
@@ -131,7 +138,8 @@ class Session:
         pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
         try:                                              # AI yearly summary (alliances/enmities/troops), same LLM
             self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
-        except Exception:
+        except Exception as e:                            # LLM/parse fail -> local fallback, but log why
+            log.warning("年度总结失败, 回退本地: %s", e)
             self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()
         for a in self.ai.values(): a.mem.tick()
@@ -147,7 +155,7 @@ class Session:
             lost = before[victim] - set(self.eng.game.powers[victim].centers)
             for cen in lost:
                 taker = next((c for c in POWERS if cen in self.eng.game.powers[c].centers), None)
-                if not taker or taker == victim or taker not in self.ai:
+                if not taker or taker == victim:                  # any taker (incl. human) holds a grudge for AI victim
                     continue
                 vm = self.ai[victim].mem if victim in self.ai else None
                 ally = vm and vm.relation(taker).trust > 20
@@ -157,11 +165,18 @@ class Session:
 
     SAVES = Path("logs") / "saves"
 
+    @staticmethod
+    def _safe_name(name: str) -> str:                    # basename + whitelist: block ../ path traversal
+        stem = Path(name or "auto").name
+        stem = re.sub(r"[^\w.-]", "_", stem)[:64].strip(".") or "auto"
+        return stem
+
     @classmethod
     def list_saves(cls) -> list[str]:
         return sorted(p.stem for p in cls.SAVES.glob("*.json")) if cls.SAVES.exists() else []
 
     def save(self, name: str = "auto") -> dict:          # save slot: board+chronicle+memories
+        name = self._safe_name(name)
         self.SAVES.mkdir(parents=True, exist_ok=True)
         blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
                 "chronicle": self.chronicle, "persona_key": self.persona_key, "round": self.round, "mode": self.mode,
@@ -171,7 +186,10 @@ class Session:
 
     @classmethod
     def load(cls, name: str = "auto") -> "Session":
-        b = json.loads((cls.SAVES / f"{name}.json").read_text())
+        f = cls.SAVES / f"{cls._safe_name(name)}.json"
+        if not f.exists():
+            raise FileNotFoundError(f"save not found: {name}")
+        b = json.loads(f.read_text())
         s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))  # same personas
         s.eng.load(b["board"]); s.chronicle = b["chronicle"]
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
