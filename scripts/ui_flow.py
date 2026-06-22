@@ -1,10 +1,10 @@
-"""真浏览器全流程: 菜单→新局(选国)→勾选私聊国开私聊→发私信→下令checkbox. 需起服 :8754。"""
+"""真浏览器全流程: 菜单→新局(选国)→勾选私聊国开私聊→发私信→下令checkbox. 需起服 :8761。"""
 from playwright.sync_api import sync_playwright
 
 with sync_playwright() as pw:
     b = pw.chromium.launch(); pg = b.new_page(); errs = []
     pg.on("pageerror", lambda e: errs.append(str(e)))
-    pg.goto("http://localhost:8754"); pg.wait_for_timeout(800)
+    pg.goto("http://localhost:8761"); pg.wait_for_timeout(800)
     assert pg.is_visible("#menu"); print("✓ 主菜单显示")
     pg.click("text=新游戏 New Game"); pg.select_option("#hsel", "FRANCE"); pg.click("text=开始 Start")
     pg.wait_for_function("()=>document.getElementById('game').className==''", timeout=10000); print("✓ 进游戏")
