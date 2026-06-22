@@ -1,5 +1,6 @@
 """人机对局会话 — 全员对等轮次同步。人/AI 共用 Player.negotiate/decide 接口,
-仅输入源不同(前端 future vs LLM)。后端控流程:发言/跳过/等齐/推进/下令/结算。
+仅输入源不同(前端 vs LLM)。后端控流程:发言/跳过/等齐/推进/下令/结算。
+多座位: 0/1/多人, 各座位独立发言计数与下令; 满座等齐才推进。单人 API(human_say/submit)= 主座位糖衣。
 """
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ class Session:
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
         self.chronicle: list[str] = []; self._opened: set[str] = set()
         self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
+        self._horders: dict[str, list[str]] = {}; self._settling = False   # per-human submitted orders; settle once
 
     async def begin_phase(self) -> None:
         self._cog = False
@@ -80,20 +82,27 @@ class Session:
 
     MSGS_PER_ROUND = 3                                    # each player can send up to 3 msgs/round (multi-channel)
 
-    async def human_say(self, scope, recipient, content, skip=False) -> dict:
-        if self.mode != "NEGO" or self.human in self._done:        # already acted -> reject
+    async def say(self, power, scope, recipient, content, skip=False) -> dict:
+        """One seat speaks/skips. power must be a human seat. Done after skip or 3 msgs."""
+        if power not in self.humans:
+            return {"ok": False, "reason": "非人类座位"}
+        if self.mode != "NEGO" or power in self._done:            # already acted -> reject
             return {"ok": False, "reason": "本轮已发言/跳过, 等其他玩家"}
         if not skip and not content.strip():
             return {"ok": False, "reason": "不能发空消息"}
         if not skip:
-            self._hmsgs.setdefault(self.human, []).append(Message(type=scope, recipient=recipient, content=content))
-        if skip or len(self._hmsgs.get(self.human, [])) >= self.MSGS_PER_ROUND:
-            self._done[self.human] = self._hmsgs.get(self.human) or None   # done after skip or 3 msgs
+            self._hmsgs.setdefault(power, []).append(Message(type=scope, recipient=recipient, content=content))
+        if skip or len(self._hmsgs.get(power, [])) >= self.MSGS_PER_ROUND:
+            self._done[power] = self._hmsgs.get(power) or None   # done after skip or 3 msgs
             await self._maybe_advance()
-        return {"ok": True, "sent": len(self._hmsgs.get(self.human, []))}
+        return {"ok": True, "sent": len(self._hmsgs.get(power, []))}
 
-    def your_turn(self) -> bool:                          # can speak (<3 msgs, not done) this round
-        return self.mode == "NEGO" and self.human is not None and self.human not in self._done
+    async def human_say(self, scope, recipient, content, skip=False) -> dict:   # primary-seat shim
+        return await self.say(self.human, scope, recipient, content, skip)
+
+    def your_turn(self, power=None) -> bool:               # can speak (<3 msgs, not done) this round
+        power = power or self.human
+        return self.mode == "NEGO" and power in self.humans and power not in self._done
 
     async def _maybe_advance(self) -> None:
         if self.pending() or self.round in self._committed:
@@ -106,51 +115,71 @@ class Session:
         log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
         self.round += 1; self._cog = True            # cognition once per phase
         if self.round > self.rounds or self.bus.round_silent(self.round - 1):
-            self.mode = "ORDERS"; log.info("转下令")
-            if not self.human:                            # all-AI spectate: auto-settle + next phase
+            self.mode = "ORDERS"; self._horders = {}; log.info("转下令")
+            if not self.humans:                           # all-AI spectate: auto-settle + next phase
                 spawn(self._auto_spectate())
         else:
             self._start_round()
 
     async def _auto_spectate(self) -> None:
-        await self.submit([])
+        await self.settle()
         if not self.eng.is_done() and not self.eng.check_end(self.max_year):
             await self.begin_phase()
 
     def open_private(self, recipients) -> str:
         key = "·".join(sorted({self.human, *[r.upper() for r in recipients]})); self._opened.add(key); return key
 
-    def legal(self) -> list[str]:
-        return sorted({o for v in self.eng.legal_orders(self.human).values() for o in v}) if self.human else []
+    def legal(self, power=None) -> list[str]:
+        power = power or self.human
+        return sorted({o for v in self.eng.legal_orders(power).values() for o in v}) if power else []
 
-    async def submit(self, human_orders) -> dict:
-        if self.human:
-            self.eng.submit(self.human, [o for o in human_orders if o in self.eng_legal(self.human)])
-        if self.eng.phase_type() == "M":                 # movement: AI LLM orders; retreat/build: AI auto
-            ai = self.ai_players()
-            outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))
-            for p, chosen in zip(ai, outs):
-                self.eng.submit(p.country, chosen)
-        else:
-            self.eng.auto_resolve(except_=self.human)    # retreat/build: AI auto, human chose
-        before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
-        nxt = self.eng.process()
-        self._detect_betrayal(before)                # capturing ally center=betrayal
-        # retreat/build: AI auto; stop for human if legal, else next movement
-        while self.eng.phase_type() != "M" and not self.eng.is_done():
-            if self.human and self.legal():
-                self.mode = "ORDERS"; return {"phase": nxt, "build": True, "end": None}
-            self.eng.auto_resolve(); nxt = self.eng.process()
-        log.info("结算 -> %s", nxt)
-        pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
-        try:                                              # AI yearly summary (alliances/enmities/troops), same LLM
-            self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
-        except Exception as e:                            # LLM/parse fail -> local fallback, but log why
-            log.warning("年度总结失败, 回退本地: %s", e)
-            self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
-        self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set()
-        for a in self.ai.values(): a.mem.tick()
-        return {"phase": nxt, "end": self.eng.check_end(self.max_year)}
+    async def submit_orders(self, power, orders) -> dict:
+        """One human seat hands in orders. Settle once all humans submitted (or no humans)."""
+        if self.mode != "ORDERS" or power not in self.humans:
+            return {"ok": False, "reason": "非下令阶段/非人类座位"}
+        self._horders[power] = [o for o in orders if o in self.eng_legal(power)]
+        if all(p in self._horders for p in self.humans):
+            return await self.settle()
+        return {"ok": True, "waiting": sorted(p for p in self.humans if p not in self._horders)}
+
+    async def submit(self, human_orders=None) -> dict:    # primary-seat shim: submit + settle
+        if self.human and human_orders is not None:
+            self._horders[self.human] = [o for o in human_orders if o in self.eng_legal(self.human)]
+        return await self.settle()
+
+    async def settle(self) -> dict:
+        if self._settling:
+            return {"ok": False, "reason": "结算中"}
+        self._settling = True
+        try:
+            for p, o in self._horders.items():
+                self.eng.submit(p, o)                     # humans' submitted orders (already legal-filtered)
+            if self.eng.phase_type() == "M":              # movement: AI LLM orders; retreat/build: AI auto
+                ai = self.ai_players()
+                outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))
+                for p, chosen in zip(ai, outs):
+                    self.eng.submit(p.country, chosen)
+            else:
+                self.eng.auto_resolve(except_=set(self.humans))   # retreat/build: AI auto, humans chose
+            before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
+            nxt = self.eng.process()
+            self._detect_betrayal(before)                # capturing ally center=betrayal
+            while self.eng.phase_type() != "M" and not self.eng.is_done():   # retreat/build: AI auto; stop for human
+                if self.humans and any(self.legal(p) for p in self.humans):
+                    self.mode = "ORDERS"; self._horders = {}; return {"phase": nxt, "build": True, "end": None}
+                self.eng.auto_resolve(); nxt = self.eng.process()
+            log.info("结算 -> %s", nxt)
+            pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
+            try:                                          # AI yearly summary (alliances/enmities/troops), same LLM
+                self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
+            except Exception as e:                        # LLM/parse fail -> local fallback, but log why
+                log.warning("年度总结失败, 回退本地: %s", e)
+                self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
+            self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set(); self._horders = {}
+            for a in self.ai.values(): a.mem.tick()
+            return {"phase": nxt, "end": self.eng.check_end(self.max_year)}
+        finally:
+            self._settling = False
 
     def eng_legal(self, c):
         return {o for v in self.eng.legal_orders(c).values() for o in v}
@@ -185,9 +214,9 @@ class Session:
     def save(self, name: str = "auto") -> dict:          # save slot: board+chronicle+memories
         name = self._safe_name(name)
         self.SAVES.mkdir(parents=True, exist_ok=True)
-        blob = {"human": self.human, "max_year": self.max_year, "lang": self.lang, "board": self.eng.save(),
-                "chronicle": self.chronicle, "persona_key": self.persona_key, "round": self.round, "mode": self.mode,
-                "msgs": [vars(m) for m in self.bus.msgs],   # chat history (incl private)
+        blob = {"human": self.human, "humans": self.humans, "max_year": self.max_year, "lang": self.lang,
+                "board": self.eng.save(), "chronicle": self.chronicle, "persona_key": self.persona_key,
+                "round": self.round, "mode": self.mode, "msgs": [vars(m) for m in self.bus.msgs],   # chat history
                 "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
         (self.SAVES / f"{name}.json").write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": name}
 
@@ -197,7 +226,7 @@ class Session:
         if not f.exists():
             raise FileNotFoundError(f"save not found: {name}")
         b = json.loads(f.read_text())
-        s = cls(b["human"], b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))  # same personas
+        s = cls(b.get("humans", b["human"]), b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))
         s.eng.load(b["board"]); s.chronicle = b["chronicle"]
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
         for m in b.get("msgs", []):                      # restore chat history
@@ -207,19 +236,22 @@ class Session:
                 s.ai[c].mem.restore(snap)
         return s
 
-    def state(self) -> dict:
-        chans = self.bus.channels(self.human, self.round)   # spectate(human=None): privates auto-hidden, 群聊 visible
+    def state(self, power=None) -> dict:
+        power = power if power is not None else self.human
+        chans = self.bus.channels(power, self.round)        # spectate(power=None): privates auto-hidden, 群聊 visible
         for k in self._opened: chans.setdefault(k, [])
-        return {"human": self.human, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
-                "pending": self.pending(), "human_done": self.human in self._done, "your_turn": self.your_turn(),
-                "sent": len(self._hmsgs.get(self.human, [])), "staged": "已发%d/3" % len(self._hmsgs.get(self.human, [])),
-                "msgs_left": max(0, self.MSGS_PER_ROUND - len(self._hmsgs.get(self.human, []))),  # remaining this round
-                "staged_msgs": [m.content for m in self._hmsgs.get(self.human, [])],  # this round's pending msgs (delivered at round end)
+        hmsgs = self._hmsgs.get(power, [])
+        return {"human": power, "humans": self.humans, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
+                "pending": self.pending(), "human_done": power in self._done, "your_turn": self.your_turn(power),
+                "sent": len(hmsgs), "staged": "已发%d/3" % len(hmsgs),
+                "msgs_left": max(0, self.MSGS_PER_ROUND - len(hmsgs)),  # remaining this round
+                "staged_msgs": [m.content for m in hmsgs],  # this round's pending msgs (delivered at round end)
                 "centers": self.eng.centers(), "channels": chans, "lang": self.lang,  # persona hidden; debug only
                 "phase_type": self.eng.phase_type(),
-                # ORDERS phase: who still owes orders (human until submit; 6 AI decide on submit)
-                "order_pending": ([self.human] if self.human else []) + sorted(self.ai) if self.mode == "ORDERS" else [],
-                "legal": self.legal() if self.mode == "ORDERS" else []}
+                # ORDERS phase: who still owes orders (humans until submit; 6 AI decide on submit)
+                "order_pending": (sorted(p for p in self.humans if p not in self._horders) + sorted(self.ai))
+                                 if self.mode == "ORDERS" else [],
+                "legal": self.legal(power) if self.mode == "ORDERS" else []}
 
 
 class Msg:

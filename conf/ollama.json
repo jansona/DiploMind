@@ -1,9 +1,0 @@
-{
-  "base_url": "http://localhost:11434",
-  "api": "ollama",
-  "model": "qwen3.5:4b",
-  "rounds": 5,
-  "lang": "zh-Hans",
-  "concurrency": 3,
-  "timeout": 120
-}

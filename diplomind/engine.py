@@ -75,10 +75,11 @@ class OperationEngine:
     def phase_type(self) -> str:
         return self.game.phase_type   # M=Movement R=Retreat A=Adjustment(build)
 
-    def auto_resolve(self, except_: str | None = None) -> None:
-        """Fallback for retreat/build phases: each power takes the first legal order. except_ skips (human chose)."""
+    def auto_resolve(self, except_=None) -> None:
+        """Fallback for retreat/build phases: each power takes the first legal order. except_ skips (humans chose)."""
+        skip = {except_} if isinstance(except_, str) else set(except_ or ())
         for p in self.game.powers:
-            if p == except_:
+            if p in skip:
                 continue
             legal = self.legal_orders(p)
             self.game.set_orders(p, [opts[0] for opts in legal.values() if opts])
