@@ -20,8 +20,8 @@ Main menu → New Game (pick country/language/preset) or Continue (load a save),
 
 ## Play modes
 - **Human vs AI** — you take one power, six AI fill the rest.
-- **Mixed** — any subset human, the rest AI; the round flow is identical for all.
 - **All-AI spectator** — watch seven AI scheme to 18 centers or a survivor draw.
+- **Mixed / multiplayer** (phase 2) — backend supports many humans; web is single-client for now.
 
 ## How it works
 - **Synchronous rounds**: each power sends up to 3 messages/round (group or private),
