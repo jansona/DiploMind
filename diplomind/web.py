@@ -179,11 +179,11 @@ def _bump(room):
 @app.get("/api/stream/{code}")
 async def stream(code: str, token: str | None = None):
     async def gen():
-        last = -1
+        last = ""
         for _ in range(7200):                            # ~1h cap; client reconnects
-            room = RM.rooms.get(code); v = getattr(room, "version", 0) if room else -1
-            if v != last:
-                last = v; yield f"data: {json.dumps(state(token))}\n\n"
+            cur = json.dumps(state(token))               # push on any state diff (AI advances don't _bump)
+            if cur != last:
+                last = cur; yield f"data: {cur}\n\n"
             await asyncio.sleep(0.5)
     return StreamingResponse(gen(), media_type="text/event-stream")
 
