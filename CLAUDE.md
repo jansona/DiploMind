@@ -2,7 +2,8 @@
 
 > 基于 LLM 的单机《外交》桌游：人类对阵会结盟、会撒谎、会背刺的 AI 国家。代号 DiploMind（Diplomacy + Mind）。
 
-> 状态：一期完成(分支 main, 53测+playwright绿)。归档见 docs/archive/PHASE1.md。二期开新会话续。
+> 状态：二期多人模式落地(分支 main, 65测+playwright绿)。一期归档 docs/archive/PHASE1.md；多人方案 docs/PHASE2_MULTIPLAYER.md。
+> 多人=一服多局:房间码+昵称认领座位+seat-token续座, 房主开局/暂停/结束, AI补满7国, SSE推送, 谈判轮180s计时(仅人类)。rooms.py 注册, ui.html 前端。
 
 ## 简介
 人执一国(可配)+6AI/混合/全AI观战。AI 各有隐藏性格，自然语言谈判/结盟/背刺，记仇兑现；难度=各国模型档位。人/AI 共用同一回合流程，仅输入源不同（前端 vs LLM）。
@@ -32,8 +33,8 @@
 - `diplomind/players.py` 人/AI 统一 Player 接口；`session.py` 对局会话(轮次同步/存档)
 - `diplomind/memory.py` 记忆：关系/承诺/背叛/diary；`bus.py` 三态消息总线
 - `diplomind/orchestrator.py` 年循环；`chronicle.py` 编年史；`debugpanel.py` 观测
-- `diplomind/web.py` FastAPI+前端(主菜单/选国/语言/预设/存档/debug)；`personalities.py` 7性格+语言；`config.py` 配置；`names.py` 地名；`chronicle.py` AI年度史；`i18n/` 界面文案；`conf/presets/` 性格预设
-- `tests/` 53单元/集成；`scripts/` 真跑+playwright(ui_flow/ui_human)
+- `diplomind/web.py` FastAPI 端点(房间/座位/SSE/计时)+`ui.html` 前端(大厅/建房/认领/owner控制)；`rooms.py` 房间注册(多局/token/计时)；`personalities.py` 7性格+语言；`config.py` 配置；`names.py` 地名；`chronicle.py` AI年度史；`i18n/` 界面文案；`conf/presets/` 性格预设
+- `tests/` 65单元/集成；`scripts/` 真跑+playwright(ui_mp=多人房, ui_fixes=单座位回归; 旧 ui_* 用已移除单局端点, 待清)
 
 ## 运行
 ```bash

@@ -28,13 +28,16 @@ Session: humans[] 已有 → 收口 say(power)/submit(power)/state(power); token
 - owner 暂停(冻结计时+拒动作)/结束/转让；闲置房 N 分钟回收。
 - 邀请链接 `/?join=CODE`。
 
-## 分步施工（每步绿了再下一步）
-1. **座位去单human化** session.py：say/submit/state 带 power，多 human 等齐推进；超时落子规则。
-2. **房间注册** rooms{code}、建房/进房、token→(room,seat)，owner=建者。无大厅可玩。
-3. **大厅+管理** 主页列房(名/年/座位/状态)、新建/续档/删；owner 暂停/结束/转让。
-4. **身份续座** token 存 localStorage，名+房回座；save/load 存座位映射。
-5. **SSE 推送** /api/stream/{code} 替 2s 轮询。
-6. **计时器** 谈判倒计时(仅人类)、超时落子、邀请链接、缩短/恢复。
+## 分步施工（全部已落地, 65测+ui_mp/ui_fixes playwright 绿）
+1. ✅ **座位去单human化** session.py：say/submit_orders/state(power)，多 human 等齐推进，settle 全员交齐才结算。
+2. ✅ **房间注册** rooms.py：RoomManager{code}、create/join、token→(room,seat)，owner=建者，AI补满。
+3. ✅ **大厅+管理** ui.html 列房/建房/续档；owner start/pause/end，闲置 gc。
+4. ✅ **身份续座** token 存 localStorage，刷新 resume() 回座；save 存 humans 座位。
+5. ✅ **SSE 推送** /api/stream/{code} 按 state diff 推(AI推进也送), 替 2s 轮询。
+6. ✅ **计时器** _ticker 谈判倒计时(仅人类), 超时 skip/hold, 30s 惩罚直到响应; 邀请 /?join=CODE。
+
+## 待打磨(二期收尾)
+房主转让UI、踢人、断线提示;计时器开关UI;移动端;多局压测;ui_mp 全程结算(2b 慢, 现验到跨座位投递)。
 
 ## 不做（避免范围蔓延）
 账号系统、公网部署、WebSocket 双向、大厅排行——超出 LAN 自用。

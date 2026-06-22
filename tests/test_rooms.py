@@ -31,3 +31,11 @@ def test_list_and_gc():
     m = RoomManager(); a = m.create("a", "x", "FRANCE"); b = m.create("b", "y", "ITALY")
     assert len(m.list()) == 2; b.status = "ended"; m.gc()
     assert b.code not in m.rooms and len(m.list()) == 1
+
+
+def test_timer_penalty_secs():
+    from diplomind.rooms import DEFAULT_SECS, SHORT_SECS
+    m = RoomManager(); r = m.create("t", "Al", "FRANCE"); r.start()
+    assert r.secs == DEFAULT_SECS == 180 and SHORT_SECS == 30
+    r.short.add("FRANCE")                                  # after a timeout, that seat is penalized
+    assert (SHORT_SECS if r.short else r.secs) == 30       # next round uses short clock
