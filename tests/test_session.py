@@ -63,3 +63,14 @@ async def test_spectate_auto_advances():
     await s.begin_phase()
     for _ in range(20): await _tick()
     assert s.eng.phase() != "S1901M"                    # 观战无人, 自动推进相
+
+
+@pytest.mark.asyncio
+async def test_settle_then_next_round_not_stuck():
+    s = _sess(); await s.begin_phase()
+    for _ in range(5):
+        await _tick()
+        if s.mode == "NEGO": await s.human_say("broadcast", [], "", skip=True)
+    await _tick(); assert s.mode == "ORDERS"
+    nxt = await s.submit(["A PAR - BUR"]); await s.begin_phase(); await _tick()   # web spawns begin_phase after settle
+    assert s.mode == "NEGO" and s.your_turn() and nxt["phase"] != "S1901M"        # new round operable, not stuck

@@ -10,12 +10,12 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 #bar{background:var(--ink);color:#fff;padding:6px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}#bar button{background:#5a5249}
 #grid{display:grid;grid-template-columns:1fr 320px;gap:10px;padding:10px;max-width:1100px;margin:auto}
 .card{background:var(--pnl);border:1px solid var(--bd);border-radius:8px;padding:8px}
-#map{max-height:60vh;overflow:auto}#map svg{max-width:100%;height:auto}
+#map{overflow:hidden}#map svg{width:100%;height:auto;display:block}
 #log{white-space:pre-wrap;height:32vh;overflow:auto;font:12px monospace;background:#faf8f3;border-radius:5px;padding:6px}#ch{white-space:pre-wrap;font:12px monospace}
 #tabs button{font:12px;margin:1px;background:#eee;color:var(--ink)}#tabs .on{background:var(--accent);color:#fff}
 #npb{background:#fff;color:var(--accent);border:1px dashed var(--accent);font-size:11px}
 #c span{display:inline-block;padding:2px 6px;margin:2px;border-radius:4px;background:#eee}#t{width:70%}
-@media(max-width:700px){#grid{grid-template-columns:1fr}input,button,select{font-size:16px;min-height:36px}#t{width:80%}#map{max-height:42vh}}
+@media(max-width:700px){#grid{grid-template-columns:1fr}input,button,select{font-size:16px;min-height:36px}#t{width:80%}}
 </style>
 <div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button> <button onclick=lobby()>刷新房间</button>
 <h3>当前棋局 <span id=rcount></span></h3><div id=rooms></div><h3>继续存档</h3><div id=saves></div></div>

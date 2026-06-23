@@ -60,6 +60,7 @@ class Session:
         self.history: list[dict] = [{"phase": self.eng.phase(), **self.eng.centers()}]  # center counts per phase, for chart
         self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
         self._horders: dict[str, list[str]] = {}; self._settling = False   # per-human submitted orders; settle once
+        self._ai_task = None                               # AI orders drafted concurrently w/ humans during ORDERS
 
     async def begin_phase(self) -> None:
         self._cog = False
@@ -134,6 +135,8 @@ class Session:
         self.round += 1; self._cog = True            # cognition once per phase
         if self.round > self.rounds or self.bus.round_silent(self.round - 1, ph):
             self.mode = "ORDERS"; self._horders = {}; log.info("转下令")
+            if self.eng.phase_type() == "M":              # AI draft orders concurrently while humans pick
+                self._ai_task = spawn(asyncio.gather(*(p.decide(self.eng) for p in self.ai_players())))
             if not self.humans:                           # all-AI spectate: auto-settle + next phase
                 spawn(self._auto_spectate())
         else:
@@ -173,11 +176,12 @@ class Session:
         try:
             for p, o in self._horders.items():
                 self.eng.submit(p, o)                     # humans' submitted orders (already legal-filtered)
-            if self.eng.phase_type() == "M":              # movement: AI LLM orders; retreat/build: AI auto
+            if self.eng.phase_type() == "M":              # movement: AI orders drafted in parallel since ORDERS began
                 ai = self.ai_players()
-                outs = await asyncio.gather(*(p.decide(self.eng) for p in ai))
+                outs = await (self._ai_task or asyncio.gather(*(p.decide(self.eng) for p in ai)))
                 for p, chosen in zip(ai, outs):
                     self.eng.submit(p.country, chosen)
+                self._ai_task = None
             else:
                 self.eng.auto_resolve(except_=set(self.humans))   # retreat/build: AI auto, humans chose
             before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
