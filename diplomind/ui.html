@@ -13,6 +13,7 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 #map{max-height:60vh;overflow:auto}#map svg{max-width:100%;height:auto}
 #log{white-space:pre-wrap;height:32vh;overflow:auto;font:12px monospace;background:#faf8f3;border-radius:5px;padding:6px}#ch{white-space:pre-wrap;font:12px monospace}
 #tabs button{font:12px;margin:1px;background:#eee;color:var(--ink)}#tabs .on{background:var(--accent);color:#fff}
+#npb{background:#fff;color:var(--accent);border:1px dashed var(--accent);font-size:11px}
 #c span{display:inline-block;padding:2px 6px;margin:2px;border-radius:4px;background:#eee}#t{width:70%}
 @media(max-width:700px){#grid{grid-template-columns:1fr}input,button,select{font-size:16px;min-height:36px}#t{width:80%}#map{max-height:42vh}}
 </style>
@@ -25,13 +26,13 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 <h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
 <div id=game class=v>
 <div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
-<span style=flex:1></span><span id=oc class=v><button id=bstart onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
+<span style=flex:1></span><span id=oc class=v><button id=bstart onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
 <button onclick=invite()>邀请</button><button onclick=save()>存档</button><button id=bres onclick=showres() style=display:none>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
 <div id=grid>
 <div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
 <div class=card id=ord style=display:none><b>下令</b> <span class=p id=ostat></span><div id=os style=max-height:200px;overflow:auto></div>已选: <span id=osel class=p></span></div>
 <div class="card v" id=result><h3>最终结算</h3><div id=res></div><div id=chart></div></div></div>
-<aside><div class=card><b>聊天</b><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
+<aside><div class=card><b>聊天</b><div id=tabs></div><div id=pk style=font-size:11px;margin:3px 0></div><button id=npb onclick=newp()>＋ 私聊勾选国</button><div id=log></div>
 <div id=nego><input id=t placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button><div class=p id=st></div><div id=stg class=p></div></div></div>
 <div class=card><b>编年史</b><div id=ch></div></div></aside></div>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto;margin:8px></pre>
@@ -65,7 +66,7 @@ function R(s){if(s.mode=='MENU'){S(rc,CODE);oc.className='';bs.disabled=bk.disab
 inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');S(rname,s.rname||'');S(rc,s.room||CODE);oc.className=s.owner?'':'v';bstart.style.display=s.status=='lobby'?'':'none';
 S(tm,s.secs_left!=null?'⏱'+s.secs_left+'s':(s.status=='paused'?'⏸暂停':(s.timer_on?'':'计时关')));
 S(dc,((s.dropped&&s.dropped.length)?'⚠掉线:'+s.dropped.join(','):'')+((s.short&&s.short.length)?' ⏱短钟:'+s.short.join(','):''));
-if(s.owner){let oth=(s.seats||[]).filter(p=>p!=s.human);let xo='<option value=>转让给…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(xfer.innerHTML!=xo)xfer.innerHTML=xo;let ko='<option value=>踢出…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(kick.innerHTML!=ko)kick.innerHTML=ko;secsel.value=s.timer_on?s.secs:0}
+if(s.owner){let oth=(s.seats||[]).filter(p=>p!=s.human);let ko='<option value=>踢出…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(kick.innerHTML!=ko)kick.innerHTML=ko;secsel.value=s.timer_on?s.secs:0}
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
 if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
