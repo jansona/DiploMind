@@ -109,7 +109,8 @@ class RoomManager:
     def list(self) -> list[dict]:
         return [r.summary() for r in self.rooms.values() if r.status != "ended"]
 
-    def gc(self, idle: int = 3600) -> None:                # reap ended/abandoned rooms
+    def gc(self, idle: int = 7200) -> None:                # reap ended, and abandoned lobbies only; never live games
         now = time.time()
-        for c in [c for c, r in self.rooms.items() if r.status == "ended" or now - r.active > idle]:
+        dead = [c for c, r in self.rooms.items() if r.status == "ended" or (r.status == "lobby" and now - r.active > idle)]
+        for c in dead:
             del self.rooms[c]

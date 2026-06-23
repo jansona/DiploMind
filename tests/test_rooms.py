@@ -29,8 +29,9 @@ def test_start_fills_ai():
 
 def test_list_and_gc():
     m = RoomManager(); a = m.create("a", "x", "FRANCE"); b = m.create("b", "y", "ITALY")
+    a.start(); a.active = 0                       # live game, stale ping -> must NOT be reaped
     assert len(m.list()) == 2; b.status = "ended"; m.gc()
-    assert b.code not in m.rooms and len(m.list()) == 1
+    assert b.code not in m.rooms and a.code in m.rooms and len(m.list()) == 1   # playing survives, ended reaped
 
 
 def test_timer_penalty_secs():
