@@ -68,10 +68,11 @@ class Agent:
     def _order_prompt(self, eng: OperationEngine, flat: list[str]) -> str:
         n = len(eng.legal_orders(self.country))
         grab = (self.mem.intent or {}).get("grab") or []
-        push = "你是侵略者: 每个单位都必须移动占地, 严禁 hold。" if self.persona.name == "侵略者" else "多数单位该移动占地, 仅必要才原地。"
+        q = {"all": n, "most": max(1, n - 1), "half": max(1, n // 2), "defend": 0}.get(self.persona.attack, max(1, n // 2))
+        push = (f"硬约束: 至少 {q}/{n} 个单位必须移动/进攻或支援进攻, 最多 {n - q} 条 hold; 违者重选。" if q
+                else "守土风格: 可多 hold, 但仍至少 1 兵伺机扩张。")
         return (self.perceive(eng) + f"\n意图:{self.mem.intent}\n你是 {self.country}，仅指挥自己 {n} 个单位。"
-                f"本回合目标中心:{grab or '自选可占中心'}, 优先派兵进占。进攻多需配合: 主攻方向用 S 支援自己或盟友, 单兵硬冲常 bounce。"
-                f"扩张优先: 抢无主中心涨得最快, 别全 hold; {push}"
+                f"本回合目标中心:{grab or '自选可占中心'}, 优先派兵进占。进攻须 S 支援集火, 单兵硬冲常 bounce。{push}"
                 f"下列合法命令带编号，每单位恰好挑一条，把所选的{n}个编号(数字)放入 orders 数组：\n"
                 + "\n".join(f"{i}: {o}" for i, o in enumerate(flat)) + '\n示例:{"orders":["0"],"reasoning":"一句话"}')
 
