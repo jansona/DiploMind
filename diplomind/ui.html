@@ -26,7 +26,7 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 <div id=game class=v>
 <div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
 <span style=flex:1></span><span id=oc class=v><button onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
-<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button onclick=showres()>结算</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
+<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button onclick=showres()>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
 <div id=grid>
 <div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
 <div class=card id=ord style=display:none><b>下令</b> <span class=p id=ostat></span><div id=os style=max-height:200px;overflow:auto></div>已选: <span id=osel class=p></span></div>
