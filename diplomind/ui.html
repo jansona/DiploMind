@@ -4,9 +4,9 @@
 <h3>当前棋局 <span id=rcount></span></h3><div id=rooms></div><h3>继续存档</h3><div id=saves></div></div>
 <div id=setup class=v><h2>新游戏</h2>房名 <input id=rn size=20 placeholder=桌名> 昵称 <input id=nm size=12 value=Host>
 扮演 <select id=hsel><option>AUSTRIA<option>ENGLAND<option selected>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY<option value="">观战/Spectate</select>
-语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select>
+语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select> 口令(可空) <input id=pw size=8 placeholder=passcode>
 <button onclick=create()>建房 Create</button> <button onclick=toMenu()>返回</button>
-<h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
+<h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
 <div id=game class=v><h2>DiploMind <b id=rname></b> 房<b id=rc></b> — <b id=h></b></h2>
 <span id=oc class=v><button onclick=start()>开局 Start</button><button onclick=pause()>暂停/继续</button><button id=tg onclick=timer()>计时</button><button onclick=end()>结束</button></span>
 <button onclick=invite()>邀请链接</button><button onclick=save()>存档</button><button onclick=toMenu()>主菜单</button><button onclick=guide()>Guide</button>
@@ -27,11 +27,11 @@ function show(v){for(let x of ['menu','setup','game'])document.getElementById(x)
 function save_t(d){TOK=d.token;CODE=d.code;localStorage.dm=JSON.stringify({TOK,CODE,L})}
 async function toMenu(){if(es)es.close();show('menu');lobby()}
 async function lobby(){let r=await G('/api/rooms');rcount.textContent='('+r.rooms.length+')';
-rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+x.name+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
+rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked?'🔒':'')+x.name+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
 let m=await G('/api/menu');saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\'ld("'+s+'")\'>'+s+'</button>').join(' ')}
 function toSetup(){show('setup')}
-async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value});save_t(d);enter()}
-async function join(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value});save_t(d);enter()}
+async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value,passcode:pw.value});save_t(d);enter()}
+async function join(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
 function jr(c){jc.value=c;toSetup()}
 async function ld(n){let d=await G('/api/load?name='+n,'POST');save_t(d);L=await G('/api/i18n/zh-Hans');enter()}
 async function start(){await G('/api/room/start','POST',{token:TOK})}

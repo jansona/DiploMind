@@ -3,11 +3,16 @@ status: lobby(配座)→playing→paused/ended。token→(room,power) 路由身�
 计时仅人类: 默认 180s/轮, 超时本轮 hold/skip, 次轮缩 30s, 有响应恢复。"""
 from __future__ import annotations
 
+import hashlib
 import secrets
 import string
 import time
 
 from .session import POWERS, Session
+
+
+def _hash(p: str) -> str:
+    return hashlib.sha256(p.encode()).hexdigest() if p else ""
 
 CODE = string.ascii_uppercase + string.digits
 DEFAULT_SECS = 180
@@ -19,8 +24,9 @@ def _code() -> str:
 
 
 class Room:
-    def __init__(self, name: str, owner: str, lang: str = "zh-Hans", max_year: int = 1910) -> None:
+    def __init__(self, name: str, owner: str, lang: str = "zh-Hans", max_year: int = 1910, passcode: str = "") -> None:
         self.code = _code(); self.name = name or self.code; self.lang = lang; self.max_year = max_year
+        self.passhash = _hash(passcode)          # ""=open; else sha256, checked on join
         self.status = "lobby"; self.created = time.time(); self.active = time.time()
         self.seats: dict[str, dict] = {}        # power -> {name, token, kind: human/ai}
         self.owner = secrets.token_hex(8)        # owner_token
@@ -48,22 +54,26 @@ class Room:
     def summary(self) -> dict:
         return {"code": self.code, "name": self.name, "status": self.status, "lang": self.lang,
                 "phase": self.session.eng.phase() if self.session else "-",
-                "humans": len(self.humans()), "seats": {p: s["name"] for p, s in self.seats.items()}, "secs": self.secs}
+                "humans": len(self.humans()), "seats": {p: s["name"] for p, s in self.seats.items()},
+                "secs": self.secs, "locked": bool(self.passhash)}
 
 
 class RoomManager:
     def __init__(self) -> None:
         self.rooms: dict[str, Room] = {}; self.tokens: dict[str, str] = {}   # token -> code
 
-    def create(self, name: str, owner_name: str, power: str | None, lang="zh-Hans") -> Room:
-        r = Room(name, owner_name, lang); self.rooms[r.code] = r; self.tokens[r.owner] = r.code
+    def create(self, name: str, owner_name: str, power: str | None, lang="zh-Hans", passcode="") -> Room:
+        r = Room(name, owner_name, lang, passcode=passcode); self.rooms[r.code] = r; self.tokens[r.owner] = r.code
         if power: r.claim(power, owner_name, r.owner)
         return r
 
-    def join(self, code: str, power: str | None, name: str, token: str | None) -> tuple[Room | None, str]:
+    def join(self, code: str, power: str | None, name: str, token: str | None, passcode="") -> tuple[Room | None, str]:
         r = self.rooms.get(code)
-        if not r: return None, ""
-        tok = token if token and self.tokens.get(token) == code else secrets.token_hex(8)
+        if not r: return None, "notfound"
+        known = token and self.tokens.get(token) == code            # owner/returning seat: passcode not re-asked
+        if r.passhash and not known and _hash(passcode) != r.passhash:
+            return None, "badpass"
+        tok = token if known else secrets.token_hex(8)
         self.tokens[tok] = code
         if power: r.claim(power, name, tok)
         return r, tok

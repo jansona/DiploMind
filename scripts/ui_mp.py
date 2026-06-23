@@ -11,12 +11,12 @@ with sync_playwright() as pw:
     sel = lambda p, i: p.eval_on_selector(i, "e=>e.textContent")
     # host creates room as FRANCE
     host.goto(B); host.wait_for_timeout(600); host.click("text=新游戏 New Game")
-    host.fill("#rn", "Table1"); host.select_option("#hsel", "FRANCE"); host.click("text=建房 Create")
+    host.fill("#rn", "Table1"); host.fill("#pw", "x9"); host.select_option("#hsel", "FRANCE"); host.click("text=建房 Create")
     host.wait_for_function("()=>document.getElementById('game').className==''", timeout=8000)
-    code = sel(host, "#rc"); print("✓ 建房:", code, "席位:", sel(host, "#h"))
-    # guest joins by code as GERMANY
+    code = sel(host, "#rc"); print("✓ 建房(带口令):", code, "席位:", sel(host, "#h"))
+    # guest joins by code+passcode as GERMANY
     guest.goto(B); guest.wait_for_timeout(400); guest.click("text=新游戏 New Game")
-    guest.fill("#jc", code); guest.fill("#jn", "Bob"); guest.select_option("#jp", "GERMANY"); guest.click("text=加入 Join")
+    guest.fill("#jc", code); guest.fill("#jn", "Bob"); guest.fill("#jpw", "x9"); guest.select_option("#jp", "GERMANY"); guest.click("text=加入 Join")
     guest.wait_for_function("()=>document.getElementById('game').className==''", timeout=8000); print("✓ Bob 加入为", sel(guest, "#h"))
     host.click("text=开局 Start")                                   # owner starts; AI fills 5
     host.wait_for_function("()=>document.querySelector('#h').textContent=='FRANCE'", timeout=15000)

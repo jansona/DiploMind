@@ -48,9 +48,9 @@ def rooms():
 
 
 class CreateReq(BaseModel):
-    name: str = ""; owner_name: str = "Host"; power: str | None = None; lang: str = "zh-Hans"; preset: str | None = None
+    name: str = ""; owner_name: str = "Host"; power: str | None = None; lang: str = "zh-Hans"; preset: str | None = None; passcode: str = ""
 class JoinReq(BaseModel):
-    code: str; power: str | None = None; name: str = ""; token: str | None = None
+    code: str; power: str | None = None; name: str = ""; token: str | None = None; passcode: str = ""
 class TokReq(BaseModel):
     token: str | None = None
 class SayReq(BaseModel):
@@ -63,13 +63,13 @@ class PrivReq(BaseModel):
 
 @app.post("/api/room/create")
 def create(r: CreateReq):
-    room = RM.create(r.name, r.owner_name, r.power, r.lang)
+    room = RM.create(r.name, r.owner_name, r.power, r.lang, r.passcode)
     return {"code": room.code, "token": room.owner, "seat": room.seat_of(room.owner), "owner": True}
 
 @app.post("/api/room/join")
 def join(r: JoinReq):
-    room, tok = RM.join(r.code, r.power, r.name, r.token)
-    if not room: raise HTTPException(404, "房间不存在")
+    room, tok = RM.join(r.code, r.power, r.name, r.token, r.passcode)
+    if not room: raise HTTPException(403 if tok == "badpass" else 404, "口令错误" if tok == "badpass" else "房间不存在")
     return {"code": room.code, "token": tok, "seat": room.seat_of(tok), "owner": tok == room.owner}
 
 @app.post("/api/room/start")
@@ -134,7 +134,7 @@ def save(token: str | None = None, name: str = "auto"):
     return room.session.save(name) if room and room.session else {"ok": False}
 
 @app.post("/api/load")       # owner reopens a save: humans rejoin by seat (room code re-bound to saved seats)
-def load(token: str | None = None, name: str = "auto"):
+async def load(token: str | None = None, name: str = "auto"):
     try:
         sess = Session.load(name)
     except FileNotFoundError:

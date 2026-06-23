@@ -39,3 +39,11 @@ def test_timer_penalty_secs():
     assert r.secs == DEFAULT_SECS == 180 and SHORT_SECS == 30
     r.short.add("FRANCE")                                  # after a timeout, that seat is penalized
     assert (SHORT_SECS if r.short else r.secs) == 30       # next round uses short clock
+
+
+def test_passcode_gates_join():
+    m = RoomManager(); r = m.create("t", "Al", "FRANCE", passcode="1234")
+    assert r.summary()["locked"]
+    bad, why = m.join(r.code, "GERMANY", "Bo", None, passcode="0000"); assert bad is None and why == "badpass"
+    ok, tok = m.join(r.code, "GERMANY", "Bo", None, passcode="1234"); assert ok is r and ok.seat_of(tok) == "GERMANY"
+    miss, why = m.join("ZZZZ", None, "x", None); assert miss is None and why == "notfound"

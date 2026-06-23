@@ -38,3 +38,21 @@ def test_start_requires_owner():
         j = c.post("/api/room/join", json={"code": d["code"], "power": "ITALY"}).json()
         r = c.post("/api/room/start", json={"token": j["token"]})
         assert r.status_code == 403   # non-owner can't start
+
+
+def test_passcode_join_reject_and_accept():
+    with TestClient(app) as c:
+        d = c.post("/api/room/create", json={"power": "FRANCE", "passcode": "secret"}).json()
+        assert c.post("/api/room/join", json={"code": d["code"], "power": "ITALY", "passcode": "nope"}).status_code == 403
+        j = c.post("/api/room/join", json={"code": d["code"], "power": "ITALY", "passcode": "secret"}).json()
+        assert j["seat"] == "ITALY"
+
+
+def test_save_load_continue():
+    with TestClient(app) as c:
+        d = c.post("/api/room/create", json={"power": "FRANCE", "passcode": "p"}).json()
+        c.post("/api/room/start", json={"token": d["token"]})
+        c.post("/api/save", params={"name": "wtest", "token": d["token"]})
+        nd = c.post("/api/load", params={"name": "wtest"}).json()
+        s = c.get("/api/state", params={"token": nd["token"]}).json()
+        assert s["human"] == "FRANCE" and s["mode"] != "MENU" and s["owner"]   # reopened, continues
