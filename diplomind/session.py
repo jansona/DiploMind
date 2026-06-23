@@ -43,6 +43,7 @@ class Session:
         self.humans = [h] if isinstance(h, str) else list(h or [])       # 0/1/many humans, any power
         self.human = self.humans[0] if self.humans else None             # primary (single-player UI compat)
         self.max_year = min(1910, max_year or cfg.max_year); self.lang = lang or cfg.lang
+        self.end_rule = cfg.end_rule                      # topcount=most centers wins; draw=all survivors draw
         self.rounds = cfg.rounds                          # negotiation rounds from config
         self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
                           api=cfg.api, concurrency=cfg.concurrency, timeout=cfg.timeout)
@@ -66,6 +67,9 @@ class Session:
 
     def ai_players(self):
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
+
+    def _end(self):
+        return self.eng.check_end(self.max_year, draw_all=self.end_rule == "draw")
 
     def aiify(self, power: str) -> bool:
         """Kick/abandon: a human seat becomes AI using its pre-assigned persona + blank memory."""
@@ -136,7 +140,7 @@ class Session:
 
     async def _auto_spectate(self) -> None:
         await self.settle()
-        if not self.eng.is_done() and not self.eng.check_end(self.max_year):
+        if not self.eng.is_done() and not self._end():
             await self.begin_phase()
 
     def open_private(self, recipients) -> str:
@@ -191,7 +195,7 @@ class Session:
                 self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
             self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set(); self._horders = {}
             for a in self.ai.values(): a.mem.tick()
-            return {"phase": nxt, "end": self.eng.check_end(self.max_year)}
+            return {"phase": nxt, "end": self._end()}
         finally:
             self._settling = False
 
@@ -228,7 +232,7 @@ class Session:
     def save(self, name: str = "auto") -> dict:          # save slot: board+chronicle+memories
         name = self._safe_name(name)
         self.SAVES.mkdir(parents=True, exist_ok=True)
-        blob = {"human": self.human, "humans": self.humans, "max_year": self.max_year, "lang": self.lang,
+        blob = {"human": self.human, "humans": self.humans, "max_year": self.max_year, "lang": self.lang, "end_rule": self.end_rule,
                 "board": self.eng.save(), "chronicle": self.chronicle, "persona_key": self.persona_key,
                 "round": self.round, "mode": self.mode, "msgs": [vars(m) for m in self.bus.msgs],   # chat history
                 "history": self.history, "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
@@ -242,6 +246,7 @@ class Session:
         b = json.loads(f.read_text())
         s = cls(b.get("humans", b["human"]), b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))
         s.eng.load(b["board"]); s.chronicle = b["chronicle"]; s.history = b.get("history") or s.history
+        s.end_rule = b.get("end_rule", s.end_rule)
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
         for m in b.get("msgs", []):                      # restore chat history
             s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"])
@@ -266,7 +271,7 @@ class Session:
                 "order_pending": (sorted(p for p in self.humans if p not in self._horders) + sorted(self.ai))
                                  if self.mode == "ORDERS" else [],
                 "legal": self.legal(power) if self.mode == "ORDERS" else [],
-                "end": self.eng.check_end(self.max_year), "history": self.history}  # winner/draw + center chart data
+                "end": self._end(), "history": self.history}  # winner/draw + center chart data
 
 
 class Msg:

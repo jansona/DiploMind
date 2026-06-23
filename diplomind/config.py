@@ -18,7 +18,8 @@ class Config:
     concurrency: int = 3
     human: str = "FRANCE"                         # which power the human plays; null = all-AI spectate
     timeout: int = 120                            # per-call LLM timeout (s); slow calls give up -> hold
-    max_year: int = 1910                          # year-end draw cap (hard ceiling 1910)
+    max_year: int = 1910                          # year-end cap (hard ceiling 1910)
+    end_rule: str = "topcount"                     # "topcount"=most centers wins; "draw"=all survivors draw (classic)
 
 
 DEFAULT_CONF = "conf/deepseek.json"              # default AI service = deepseek (was local ollama)

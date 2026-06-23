@@ -30,7 +30,7 @@ class Room:
         self.status = "lobby"; self.created = time.time(); self.active = time.time()
         self.seats: dict[str, dict] = {}        # power -> {name, token, kind: human/ai}
         self.owner = secrets.token_hex(8)        # owner_token
-        self.timer_on = True; self.secs = DEFAULT_SECS
+        self.timer_on = True; self.secs = DEFAULT_SECS; self.end_rule = ""   # ""=use config; topcount/draw override
         self.session: Session | None = None
         self.deadline: float | None = None       # round timeout epoch
         self.short: set[str] = set()              # powers on 30s penalty until they respond
@@ -71,6 +71,7 @@ class Room:
 
     def start(self) -> None:
         self.session = Session(self.humans(), self.max_year, self.lang)   # AI fills open seats
+        if self.end_rule: self.session.end_rule = self.end_rule
         self.status = "playing"; self.active = time.time()
 
     def summary(self) -> dict:
@@ -84,8 +85,8 @@ class RoomManager:
     def __init__(self) -> None:
         self.rooms: dict[str, Room] = {}; self.tokens: dict[str, str] = {}   # token -> code
 
-    def create(self, name: str, owner_name: str, power: str | None, lang="zh-Hans", passcode="") -> Room:
-        r = Room(name, owner_name, lang, passcode=passcode); self.rooms[r.code] = r; self.tokens[r.owner] = r.code
+    def create(self, name: str, owner_name: str, power: str | None, lang="zh-Hans", passcode="", end_rule="") -> Room:
+        r = Room(name, owner_name, lang, passcode=passcode); r.end_rule = end_rule; self.rooms[r.code] = r; self.tokens[r.owner] = r.code
         if power: r.claim(power, owner_name, r.owner)
         return r
 

@@ -48,7 +48,7 @@ def rooms():
 
 
 class CreateReq(BaseModel):
-    name: str = ""; owner_name: str = "Host"; power: str | None = None; lang: str = "zh-Hans"; preset: str | None = None; passcode: str = ""
+    name: str = ""; owner_name: str = "Host"; power: str | None = None; lang: str = "zh-Hans"; preset: str | None = None; passcode: str = ""; end_rule: str = ""
 class JoinReq(BaseModel):
     code: str; power: str | None = None; name: str = ""; token: str | None = None; passcode: str = ""
 class TokReq(BaseModel):
@@ -63,7 +63,7 @@ class PrivReq(BaseModel):
 
 @app.post("/api/room/create")
 def create(r: CreateReq):
-    room = RM.create(r.name, r.owner_name, r.power, r.lang, r.passcode)
+    room = RM.create(r.name, r.owner_name, r.power, r.lang, r.passcode, r.end_rule)
     return {"code": room.code, "token": room.owner, "seat": room.seat_of(room.owner), "owner": True}
 
 @app.post("/api/room/join")

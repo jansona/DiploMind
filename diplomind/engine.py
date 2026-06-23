@@ -84,17 +84,18 @@ class OperationEngine:
             legal = self.legal_orders(p)
             self.game.set_orders(p, [opts[0] for opts in legal.values() if opts])
 
-    def check_end(self, max_year: int = 1910) -> dict | None:
+    def check_end(self, max_year: int = 1910, draw_all: bool = False) -> dict | None:
         for p, n in self.centers().items():
-            if n >= 18:                                   # 18 centers = solo win
+            if n >= 18:                                   # 18 centers = solo win (both modes)
                 return {"winner": p, "centers": n}
         yr = int("".join(filter(str.isdigit, self.phase())) or 0)
-        if yr >= max_year:                                # max year: most centers wins; tie -> draw among co-leaders
-            cen = self.centers(); top = max(cen.values())
+        if yr >= max_year:
+            cen = self.centers()
+            if draw_all:                                  # classic: all survivors draw, no ranking
+                return {"draw": True, "survivors": sorted(p for p, n in cen.items() if n > 0), "centers": cen}
+            top = max(cen.values())                       # tournament: most centers wins; tie -> co-leaders draw
             leaders = sorted(p for p, n in cen.items() if n == top and n > 0)
-            if len(leaders) == 1:
-                return {"winner": leaders[0], "centers": top}
-            return {"draw": True, "survivors": leaders, "centers": cen}
+            return {"winner": leaders[0], "centers": top} if len(leaders) == 1 else {"draw": True, "survivors": leaders, "centers": cen}
         return None
 
     def process(self) -> str:

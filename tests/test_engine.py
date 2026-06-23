@@ -47,3 +47,9 @@ def test_endcheck_most_centers_wins_tie_draws():
     eng.game.powers["RUSSIA"].centers = ["MOS", "WAR"]          # drop RUSSIA to 2 -> 5-way tie at 3
     end = eng.check_end(max_year=1900)
     assert end["draw"] and "RUSSIA" not in end["survivors"]     # tie among co-leaders only
+
+
+def test_endcheck_draw_mode_all_survivors():
+    eng = OperationEngine(["FRANCE"])
+    end = eng.check_end(max_year=1900, draw_all=True)        # classic mode: all survivors draw, no top-rank
+    assert end["draw"] and len(end["survivors"]) == 7 and "winner" not in end
