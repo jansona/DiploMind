@@ -143,8 +143,8 @@ class Session:
         if not self.eng.is_done() and not self._end():
             await self.begin_phase()
 
-    def open_private(self, recipients) -> str:
-        key = "·".join(sorted({self.human, *[r.upper() for r in recipients]})); self._opened.add(key); return key
+    def open_private(self, power, recipients) -> str:
+        key = "·".join(sorted({power, *[r.upper() for r in recipients]})); self._opened.add(key); return key
 
     def legal(self, power=None) -> list[str]:
         power = power or self.human
@@ -258,7 +258,8 @@ class Session:
     def state(self, power=None) -> dict:
         power = power if power is not None else self.human
         chans = self.bus.channels(power, self.round)        # spectate(power=None): privates auto-hidden, 群聊 visible
-        for k in self._opened: chans.setdefault(k, [])
+        for k in self._opened:                              # only show a pre-opened private to its own members
+            if power and power in k.split("·"): chans.setdefault(k, [])
         hmsgs = self._hmsgs.get(power, [])
         return {"human": power, "humans": self.humans, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": power in self._done, "your_turn": self.your_turn(power),
@@ -271,6 +272,7 @@ class Session:
                 "order_pending": (sorted(p for p in self.humans if p not in self._horders) + sorted(self.ai))
                                  if self.mode == "ORDERS" else [],
                 "legal": self.legal(power) if self.mode == "ORDERS" else [],
+                "units": len(self.eng.legal_orders(power)) if power and self.mode == "ORDERS" else 0,  # auto-settle when all set
                 "end": self._end(), "history": self.history}  # winner/draw + center chart data
 
 

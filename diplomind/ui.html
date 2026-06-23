@@ -17,7 +17,7 @@
 <h3>中心</h3><div id=c></div>
 <h3>聊天</h3><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span><div id=stg class=p></div></div>
-<div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
+<div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span> <span class=p id=ostat></span></div>
 <div id=result class=v><h3>最终结算</h3><div id=res></div><div id=chart></div></div>
 <h3>编年史</h3><div id=ch></div>
 <div id=inside class=v><button onclick=dbg()>看内脏</button><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
@@ -62,17 +62,20 @@ nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'
 S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp+' ('+(s.msgs_left==undefined?3:s.msgs_left)+'条可发)':(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳等待…'));
 S(stg,(s.staged_msgs&&s.staged_msgs.length)?'📝本轮待投递('+s.staged_msgs.length+'/3,轮末统一送达): '+s.staged_msgs.join(' | '):'');
-let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';ord.querySelector('button').disabled=false}
+let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;UNITS=s.units||0;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';S(ostat,'每单位选一条即自动结算')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map?token='+TOK).then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle?token='+TOK).then(d=>ch.textContent=d.text)}
-window._last=s;if(s.end){result.className='';drawres(s)}}
-function ui(){bs.textContent=L.send||'发送';bk.textContent=L.skip||'跳过';ord.querySelector('button').textContent=L.sub||'下令并结算'}
+window._last=s;if(s.end||s.status=='ended'){result.className='';drawres(s);if(s.status=='ended'&&!s.end)res.textContent='对局已被房主结束'}}
+function ui(){bs.textContent=L.send||'发送';bk.textContent=L.skip||'跳过'}
 async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n+'&token='+TOK,'POST')}
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\n')+'\n\n地名:\n'+d.locs.join('\n')}
 async function say(sk){if(t.disabled)return;if(sk&&!confirm('跳过本轮?'))return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;
 let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
 let r=await G('/api/say','POST',{token:TOK,scope,recipient:to,content:t.value,skip:!!sk});if(r.ok)t.value='';R(r.state)}
-function oupd(){osel.textContent=[...os.querySelectorAll(':checked')].map(c=>c.value).join('; ')||'(无)'}
-async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部原地?'))return;let b=event.target;b.disabled=true;os.querySelectorAll('input').forEach(c=>c.disabled=true);st.textContent=L.settle;await G('/api/orders','POST',{token:TOK,orders:o})}
+let UNITS=0;
+function unit(o){return o.split(' ')[1]}                       // orderable loc of an order string
+function oupd(){let o=[...os.querySelectorAll(':checked')];osel.textContent=o.map(c=>c.value).join('; ')||'(无)';
+let set=new Set(o.map(c=>unit(c.value)));if(UNITS&&set.size>=UNITS)autosub()}                     // each unit chosen -> settle
+async function autosub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);os.querySelectorAll('input').forEach(c=>c.disabled=true);S(ostat,'⏳结算中…');await G('/api/orders','POST',{token:TOK,orders:o})}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot?token='+TOK),null,1)}
 let COL={AUSTRIA:'#c00',ENGLAND:'#333',FRANCE:'#06c',GERMANY:'#777',ITALY:'#0a0',RUSSIA:'#c0c',TURKEY:'#c60'};
 function showres(){result.className=result.className?'':'v';if(!result.className)drawres(window._last||{})}

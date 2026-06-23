@@ -138,7 +138,7 @@ async def say(r: SayReq):
 @app.post("/api/open")
 def open_private(r: PrivReq):
     room = room_of(r.token)
-    return {"channel": room.session.open_private(r.recipient) if room and room.session else ""}
+    return {"channel": room.session.open_private(room.seat_of(r.token), r.recipient) if room and room.session else ""}
 
 @app.post("/api/orders")
 async def orders(r: OrdReq):

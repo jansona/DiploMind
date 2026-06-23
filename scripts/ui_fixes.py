@@ -17,6 +17,8 @@ with sync_playwright() as pw:
         if "ORDERS" in sel("#md") or "下令" in sel("#md"): break
         if "可发言" in sel("#st"): pg.fill("#t", "ok"); pg.click("#bk")
         pg.wait_for_timeout(3000)
-    os = pg.query_selector_all("#os input"); [o.check() for o in os[:3]]; pg.click("text=下令并结算"); pg.wait_for_timeout(1200)
-    assert pg.eval_on_selector_all("#os input", "es=>es.every(e=>e.disabled)") or not os; print("✓ 下令后checkbox锁")
+    for o in pg.query_selector_all("#os input"):
+        try: o.check()
+        except Exception: break          # cover all units -> auto-settle fires & re-renders (handles detach)
+    pg.wait_for_timeout(2000); assert pg.eval_on_selector_all("#os input", "es=>!es.length||es.every(e=>e.disabled)"); print("✓ 选满自动结算+锁(无按钮)")
     print("✓ 编年史换行:", pg.eval_on_selector("#ch", "e=>getComputedStyle(e).whiteSpace"), "| JS异常:", errs or "无", "| PASS"); b.close()
