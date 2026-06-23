@@ -8,7 +8,7 @@ with sync_playwright() as pw:
     pg.goto("http://localhost:8772"); pg.wait_for_timeout(700)
     pg.click("text=新游戏 New Game"); pg.select_option("#hsel", "FRANCE"); pg.click("text=建房 Create")
     pg.wait_for_function("()=>document.getElementById('game').className==''", timeout=10000)
-    pg.click("text=开局 Start"); pg.wait_for_function("()=>document.querySelector('#h').textContent=='FRANCE'", timeout=12000); print("✓ 进局")
+    pg.click("text=开局"); pg.wait_for_function("()=>document.querySelector('#h').textContent=='FRANCE'", timeout=12000); print("✓ 进局")
     pg.wait_for_function("()=>document.querySelector('#st').textContent.includes('可发言')", timeout=30000)
     print("✓ 剩余条数:", sel("#st")); pg.fill("#t", "联手分德吗"); pg.click("#bs"); pg.wait_for_timeout(700)
     assert "待投递" in sel("#stg"); print("✓ 待投递常驻:", sel("#stg"))

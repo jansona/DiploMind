@@ -1,6 +1,21 @@
 <!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>DiploMind</title>
-<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}#ch{white-space:pre-wrap}select{width:100%}.p{color:#c60}.r{color:#c00}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}#rooms button{display:block;margin:2px 0}
-@media(max-width:600px){body{margin:.4em;font-size:15px;overflow-wrap:anywhere}input,button,#hsel,#jp,#lsel{font-size:16px;min-height:36px;margin:2px 0}#t{width:88%}#oc select{min-height:36px;font-size:15px}#os label,#tabs button{font-size:15px;line-height:2}#map{max-height:300px}#map svg{max-width:100%;height:auto}#log{height:120px}}</style>
+<style>
+:root{--bg:#f4f2ec;--pnl:#fff;--bd:#d8d2c4;--ink:#2b2620;--accent:#b5651d}
+body{font:13px/1.5 system-ui,monospace;margin:0;background:var(--bg);color:var(--ink)}
+#menu,#setup{max-width:760px;margin:1.5em auto;padding:1em}
+h1,h2,h3{font-weight:600;margin:.4em 0}.v{display:none}.p{color:var(--accent)}.r{color:#c00}
+button{font:13px system-ui;background:var(--accent);color:#fff;border:0;border-radius:5px;padding:5px 10px;cursor:pointer;margin:1px}
+button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px solid var(--bd);border-radius:5px;padding:4px}
+#rooms button,#saves button{background:var(--pnl);color:var(--ink);border:1px solid var(--bd);display:block;width:100%;text-align:left;margin:3px 0}
+#bar{background:var(--ink);color:#fff;padding:6px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}#bar button{background:#5a5249}
+#grid{display:grid;grid-template-columns:1fr 320px;gap:10px;padding:10px;max-width:1100px;margin:auto}
+.card{background:var(--pnl);border:1px solid var(--bd);border-radius:8px;padding:8px}
+#map{max-height:60vh;overflow:auto}#map svg{max-width:100%;height:auto}
+#log{white-space:pre-wrap;height:32vh;overflow:auto;font:12px monospace;background:#faf8f3;border-radius:5px;padding:6px}#ch{white-space:pre-wrap;font:12px monospace}
+#tabs button{font:12px;margin:1px;background:#eee;color:var(--ink)}#tabs .on{background:var(--accent);color:#fff}
+#c span{display:inline-block;padding:2px 6px;margin:2px;border-radius:4px;background:#eee}#t{width:70%}
+@media(max-width:700px){#grid{grid-template-columns:1fr}input,button,select{font-size:16px;min-height:36px}#t{width:80%}#map{max-height:42vh}}
+</style>
 <div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button> <button onclick=lobby()>刷新房间</button>
 <h3>当前棋局 <span id=rcount></span></h3><div id=rooms></div><h3>继续存档</h3><div id=saves></div></div>
 <div id=setup class=v><h2>新游戏</h2>房名 <input id=rn size=20 placeholder=桌名> 昵称 <input id=nm size=12 value=Host>
@@ -8,18 +23,18 @@
 语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select> 终局 <select id=endsel><option value=topcount>中心最多者胜<option value=draw>幸存即和</select> 口令(可空) <input id=pw size=8 placeholder=passcode>
 <button onclick=create()>建房 Create</button> <button onclick=toMenu()>返回</button>
 <h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
-<div id=game class=v><h2>DiploMind <b id=rname></b> 房<b id=rc></b> — <b id=h></b></h2>
-<span id=oc class=v><button onclick=start()>开局 Start</button><button onclick=pause()>暂停/继续</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢人<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
-<button onclick=invite()>邀请链接</button><button onclick=save()>存档</button><button onclick=showres()>结算</button><button onclick=toMenu()>主菜单</button><button onclick=guide()>Guide</button>
-<b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span> <span class=r id=tm></span> <span class=r id=dc></span>
-<pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
-<div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
-<h3>中心</h3><div id=c></div>
-<h3>聊天</h3><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
-<div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span><div id=stg class=p></div></div>
-<div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span> <span class=p id=ostat></span></div>
-<div id=result class=v><h3>最终结算</h3><div id=res></div><div id=chart></div></div>
-<h3>编年史</h3><div id=ch></div>
+<div id=game class=v>
+<div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
+<span style=flex:1></span><span id=oc class=v><button onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
+<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button onclick=showres()>结算</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
+<div id=grid>
+<div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
+<div class=card id=ord style=display:none><b>下令</b> <span class=p id=ostat></span><div id=os style=max-height:200px;overflow:auto></div>已选: <span id=osel class=p></span></div>
+<div class="card v" id=result><h3>最终结算</h3><div id=res></div><div id=chart></div></div></div>
+<aside><div class=card><b>聊天</b><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
+<div id=nego><input id=t placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button><div class=p id=st></div><div id=stg class=p></div></div></div>
+<div class=card><b>编年史</b><div id=ch></div></div></aside></div>
+<pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto;margin:8px></pre>
 <div id=inside class=v><button onclick=dbg()>看内脏</button><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
 <script>
 let act='群聊',chans={},mphase='',keys='',legal='',L={},seen={},unread={},TOK='',CODE='',es=null;

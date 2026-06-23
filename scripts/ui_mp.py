@@ -18,7 +18,7 @@ with sync_playwright() as pw:
     guest.goto(B); guest.wait_for_timeout(400); guest.click("text=新游戏 New Game")
     guest.fill("#jc", code); guest.fill("#jn", "Bob"); guest.fill("#jpw", "x9"); guest.select_option("#jp", "GERMANY"); guest.click("text=加入 Join")
     guest.wait_for_function("()=>document.getElementById('game').className==''", timeout=8000); print("✓ Bob 加入为", sel(guest, "#h"))
-    host.click("text=开局 Start")                                   # owner starts; AI fills 5
+    host.click("text=开局")                                   # owner starts; AI fills 5
     host.wait_for_function("()=>document.querySelector('#h').textContent=='FRANCE'", timeout=15000)
     guest.wait_for_function("()=>document.querySelector('#h').textContent=='GERMANY'", timeout=15000); print("✓ 双端进局, 席位 FR/DE")
     host.wait_for_function("()=>document.querySelector('#st').textContent.includes('可发言')", timeout=30000)
