@@ -46,6 +46,10 @@ class OperationEngine:
     def centers(self) -> dict[str, int]:
         return {p: len(self.game.powers[p].centers) for p in self.game.powers}
 
+    def neutral_centers(self) -> list[str]:
+        owned = {c for pw in self.game.powers.values() for c in pw.centers}
+        return sorted(s for s in self.game.map.scs if s not in owned)   # supply centers nobody holds
+
     # --- legal orders: per orderable location -> list of legal orders ---
     def legal_orders(self, power: str) -> dict[str, list[str]]:
         all_orders = self.game.get_all_possible_orders()

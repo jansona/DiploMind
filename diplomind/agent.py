@@ -24,7 +24,11 @@ class Agent:
         units = {p: g.powers[p].units for p in eng.active_powers}  # all units: rivals' scale matters for talks
         cen = eng.centers()
         last = eng.last_orders()                                    # everyone's deeds last phase: compare to their words
-        return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}\n"
+        neutral = eng.neutral_centers()
+        flat = {o for v in eng.legal_orders(self.country).values() for o in v}
+        grab = sorted({o.split(" - ")[1].split("/")[0] for o in flat if " - " in o} & set(neutral))  # mine within reach now
+        cue = f"\n可占无主中心:{neutral}; 你本回合能进的:{grab or '无, 先逼近'}; 秋季(F)入即占, 别全 hold" if neutral else ""
+        return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}{cue}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
 
     NEGO_TPL = ('像真人谈判：一两句话讲清意图(结盟/交易/威胁/妥协)即可，别长篇大论，口吻自然。\n'
