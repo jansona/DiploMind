@@ -27,8 +27,6 @@ local play run ollama and `DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json`.
 - **All-AI spectator** — watch seven AI scheme to an 18-center solo win or a top-count finish.
 - **Multiplayer (2–7 humans)** — one host creates a room, others join by code; AI fills empty seats.
 
-![multiplayer](docs/img/multiplayer.png)
-
 ## Multiplayer
 - **Rooms**: host creates, shares a 4-char code / invite link; optional passcode. One server, many games.
 - **Seats**: claim a country with a nickname; a seat-token resumes you on refresh. Two browser tabs = two players.
