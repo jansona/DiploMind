@@ -77,11 +77,11 @@ class Gateway:
         t = self.temperature if temp is None else temp
         if self.api == "ollama":
             b = {"model": self.model, "messages": msgs, "stream": False, "think": self.think,
-                 "options": {"temperature": t, "num_predict": 320}}
+                 "options": {"temperature": t, "num_predict": 1024}}
             if self.constrain:                           # grammar constraint -> valid schema only
                 b["format"] = schema.model_json_schema()
             return b
-        return {"model": self.model, "messages": msgs, "temperature": t, "max_tokens": 320,
+        return {"model": self.model, "messages": msgs, "temperature": t, "max_tokens": 1024,
                 "response_format": {"type": "json_object"}}   # OpenAI-compatible
 
     @staticmethod
