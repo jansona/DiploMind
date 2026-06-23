@@ -24,12 +24,16 @@ class Agent:
         units = {p: g.powers[p].units for p in eng.active_powers}  # all units: rivals' scale matters for talks
         cen = eng.centers()
         last = eng.last_orders()                                    # everyone's deeds last phase: compare to their words
-        neutral = eng.neutral_centers()
+        scs = set(eng.game.map.scs); mine = set(g.powers[self.country].centers)
         flat = {o for v in eng.legal_orders(self.country).values() for o in v}
-        grab = sorted({o.split(" - ")[1].split("/")[0] for o in flat if " - " in o} & set(neutral))  # mine within reach now
-        cue = f"\n可占无主中心:{neutral}; 你本回合能进的:{grab or '无, 先逼近'}; 秋季(F)入即占, 别全 hold" if neutral else ""
+        reach = {o.split(" - ")[1].split("/")[0] for o in flat if " - " in o} & scs - mine   # any SC I can enter now
+        grab = sorted(reach & set(eng.neutral_centers())); foe = sorted(reach - set(eng.neutral_centers()))  # neutral vs enemy
+        cue = f"\n本回合可进占: 无主{grab or '无'} 敌方{foe or '无'}; 不够强就拉盟友 support 集火, 秋季(F)入即占, 别全 hold"
         return (f"阶段:{eng.phase()} 中心:{cen} 单位:{units}\n上回合各国命令(言行对照):{last}{cue}\n"
                 f"记忆:{self.mem.summary()}\n收件:\n{inbox or '（无）'}")
+
+    PLAN = ('扩张盘算(按你的风格定力度): 1)定未来1-2年要拿哪2-3个中心——无主先占, 侵略性强就盯邻国弱者的中心; '
+            '2)想入侵路线: 哪些单位往目标推进; 3)谁能合攻: 拉接壤盟友帮 support 或夹击; 4)自家部队互保: 主攻1个、邻兵 support 它破防。')
 
     NEGO_TPL = ('像真人谈判：一两句话讲清意图(结盟/交易/威胁/妥协)即可，别长篇大论，口吻自然。\n'
                 '关键：单干赢不了——多数进攻要拉盟友互相 support 才能破防；主动结盟、约互保、瓜分弱国，无接壤就先攀邻国关系。\n'
@@ -89,7 +93,7 @@ class Agent:
     async def a_intent(self, eng: OperationEngine) -> Intent | None:
         prev = f"上回合意图(延续微调):{self.mem.intent}\n" if self.mem.intent else ""
         msgs = [self.sys, {"role": "user", "content": prev + self.perceive(eng)
-                + "\n定本回合隐藏意图。务必锁定盟友(ally填具体国名)与本回合要占的中心(grab填1-2个可占省名)。进攻前找可互保邻国 support 集火, 孤狼难赢。"}]
+                + "\n" + self.PLAN + " 定意图: ally填合攻盟友, target填要坑谁, grab填本回合要占的1-2个省名(无主或敌方皆可)。"}]
         out = await self.gw.achat(msgs, Intent, tag=f"{self.country}:intent")
         if out:
             self.mem.intent = out.model_dump()

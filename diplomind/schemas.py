@@ -10,7 +10,7 @@ class Intent(BaseModel):
     goal: str = Field("", description="本回合真目标，一句话")
     ally: str = Field("", description="想拉拢谁")
     target: str = Field("", description="想坑谁")
-    grab: list[str] = Field(default_factory=list, description="本回合要占的中心(1-2个省名,从可占中心挑)")
+    grab: list[str] = Field(default_factory=list, description="本回合要占的中心(1-2个省名,无主或敌方皆可)")
     move_turn: int = Field(0, description="预计第几回合动手")
 
     @field_validator("grab", mode="before")
