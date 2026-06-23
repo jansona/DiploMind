@@ -36,13 +36,13 @@ def spawn(coro):                                         # fire-and-forget but s
 
 
 class Session:
-    def __init__(self, human: str | None = "__cfg__", max_year: int = 1910,
+    def __init__(self, human: str | None = "__cfg__", max_year: int | None = None,
                  lang: str | None = None, personas: dict | None = None, cfg=None) -> None:
         cfg = cfg or load_config()
         h = cfg.human if human == "__cfg__" else human
         self.humans = [h] if isinstance(h, str) else list(h or [])       # 0/1/many humans, any power
         self.human = self.humans[0] if self.humans else None             # primary (single-player UI compat)
-        self.max_year = max_year; self.lang = lang or cfg.lang
+        self.max_year = min(1910, max_year or cfg.max_year); self.lang = lang or cfg.lang
         self.rounds = cfg.rounds                          # negotiation rounds from config
         self.gw = Gateway(model=cfg.model, base_url=cfg.base_url, api_key=cfg.api_key,
                           api=cfg.api, concurrency=cfg.concurrency, timeout=cfg.timeout)

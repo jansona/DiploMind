@@ -18,6 +18,7 @@ class Config:
     concurrency: int = 3
     human: str = "FRANCE"                         # which power the human plays; null = all-AI spectate
     timeout: int = 120                            # per-call LLM timeout (s); slow calls give up -> hold
+    max_year: int = 1910                          # year-end draw cap (hard ceiling 1910)
 
 
 DEFAULT_CONF = "conf/deepseek.json"              # default AI service = deepseek (was local ollama)
@@ -33,4 +34,5 @@ def load() -> Config:
     for env, attr in [("DIPLOMIND_MODEL", "model"), ("DIPLOMIND_LANG", "lang")]:  # env overrides file
         if os.getenv(env):
             setattr(c, attr, os.getenv(env))
+    c.max_year = min(1910, int(c.max_year))      # hard ceiling: engine retreat/build only to 1910
     return c

@@ -24,7 +24,7 @@ def _code() -> str:
 
 
 class Room:
-    def __init__(self, name: str, owner: str, lang: str = "zh-Hans", max_year: int = 1910, passcode: str = "") -> None:
+    def __init__(self, name: str, owner: str, lang: str = "zh-Hans", max_year: int | None = None, passcode: str = "") -> None:
         self.code = _code(); self.name = name or self.code; self.lang = lang; self.max_year = max_year
         self.passhash = _hash(passcode)          # ""=open; else sha256, checked on join
         self.status = "lobby"; self.created = time.time(); self.active = time.time()
