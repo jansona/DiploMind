@@ -63,9 +63,11 @@ class Agent:
 
     def _order_prompt(self, eng: OperationEngine, flat: list[str]) -> str:
         n = len(eng.legal_orders(self.country))
+        grab = (self.mem.intent or {}).get("grab") or []
+        push = "你是侵略者: 每个单位都必须移动占地, 严禁 hold。" if self.persona.name == "侵略者" else "多数单位该移动占地, 仅必要才原地。"
         return (self.perceive(eng) + f"\n意图:{self.mem.intent}\n你是 {self.country}，仅指挥自己 {n} 个单位。"
-                f"进攻多需配合: 主攻方向用 S 支援自己或盟友, 单兵硬冲常 bounce。"
-                f"扩张优先: 抢无主中心是涨中心最快的路, 别全 hold; 多数单位该移动占地, 仅必要才原地。"
+                f"本回合目标中心:{grab or '自选可占中心'}, 优先派兵进占。进攻多需配合: 主攻方向用 S 支援自己或盟友, 单兵硬冲常 bounce。"
+                f"扩张优先: 抢无主中心涨得最快, 别全 hold; {push}"
                 f"下列合法命令带编号，每单位恰好挑一条，把所选的{n}个编号(数字)放入 orders 数组：\n"
                 + "\n".join(f"{i}: {o}" for i, o in enumerate(flat)) + '\n示例:{"orders":["0"],"reasoning":"一句话"}')
 
@@ -87,7 +89,7 @@ class Agent:
     async def a_intent(self, eng: OperationEngine) -> Intent | None:
         prev = f"上回合意图(延续微调):{self.mem.intent}\n" if self.mem.intent else ""
         msgs = [self.sys, {"role": "user", "content": prev + self.perceive(eng)
-                + "\n定本回合隐藏意图。务必锁定盟友: 进攻前先找可互保的邻国, 用 support 集火破防; 孤狼难赢, ally 字段尽量填具体国名。"}]
+                + "\n定本回合隐藏意图。务必锁定盟友(ally填具体国名)与本回合要占的中心(grab填1-2个可占省名)。进攻前找可互保邻国 support 集火, 孤狼难赢。"}]
         out = await self.gw.achat(msgs, Intent, tag=f"{self.country}:intent")
         if out:
             self.mem.intent = out.model_dump()

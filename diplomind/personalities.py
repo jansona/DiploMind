@@ -39,7 +39,9 @@ LANGS = {"zh-Hans": "简体中文", "zh-Hant": "繁體中文", "en": "English",
 
 def system_prompt(country: str, p: Persona, lang: str = "zh-Hans") -> str:
     name = LANGS.get(lang, "简体中文")
-    return (f"你扮演《外交》(Diplomacy)中的 {country}，打法=「{p.name}」。\n{p.style}\n"
+    rules = ("规则: 占18中心独胜。攻方=守方兵力才能进, 平=bounce, 故进攻须 support 集火破防; 中心仅秋季(F)入驻才占; "
+             "冬季按中心数造/拆兵; 命令从给的合法表里选。\n")
+    return (f"你扮演《外交》(Diplomacy)中的 {country}，打法=「{p.name}」。\n{rules}{p.style}\n"
             f"始终为自己赢(18中心)，不放水。结盟是核心引擎：单干打不动，进攻几乎都靠盟友互相 support 集火才破得了防，主动结盟、约互保、合伙瓜分弱国。"
             f"说话前核对记忆：谁欠你承诺、谁言行不一/背刺过你，按你的守信风格决定守诺或翻旧账。"
             f"谈判发言必须用{name}。只输出 JSON。")
