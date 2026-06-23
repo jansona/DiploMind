@@ -1,5 +1,7 @@
 # DiploMind
 
+[![CI](https://github.com/jansona/DiploMind/actions/workflows/ci.yml/badge.svg)](https://github.com/jansona/DiploMind/actions/workflows/ci.yml)
+
 [中文](README.zh-CN.md)
 
 An LLM-powered digital version of the board game *Diplomacy*, where AI nations

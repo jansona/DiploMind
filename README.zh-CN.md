@@ -1,5 +1,7 @@
 # DiploMind
 
+[![CI](https://github.com/jansona/DiploMind/actions/workflows/ci.yml/badge.svg)](https://github.com/jansona/DiploMind/actions/workflows/ci.yml)
+
 [English](README.md)
 
 基于 LLM 的单机《外交》(Diplomacy) 数字版：AI 国家用自然语言谈判、结盟、撒谎、背刺。
