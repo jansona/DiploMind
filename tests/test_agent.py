@@ -53,6 +53,6 @@ def test_order_resolve_index_fuzzy_holdfill():
     a = Agent("FRANCE", PERSONAS["bully"], gw=None)
     legal = {"PAR": ["A PAR - BUR", "A PAR H"], "BRE": ["F BRE - MAO", "F BRE H"]}
     flat = sorted(o for v in legal.values() for o in v)        # ['A PAR - BUR','A PAR H','F BRE - MAO','F BRE H']
-    assert a._resolve(["0", "F BRE-MAO"], flat, legal) == ["A PAR - BUR", "F BRE - MAO"]   # index + fuzzy
-    assert set(a._resolve([], flat, legal)) == {"A PAR H", "F BRE H"}        # nothing -> both hold (no frozen units)
-    assert a._resolve(["0", "1"], flat, legal) == ["A PAR - BUR", "F BRE H"] # dup PAR dropped, BRE hold-filled
+    assert a._resolve(["0", "F BRE-MAO"], flat) == ["A PAR - BUR", "F BRE - MAO"]   # index + fuzzy
+    assert a._resolve([], flat) == []                                        # nothing -> engine holds unordered units
+    assert a._resolve(["0", "1"], flat) == ["A PAR - BUR"]                   # dup PAR: keep first, drop 2nd (logged)

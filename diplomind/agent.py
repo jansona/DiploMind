@@ -42,9 +42,9 @@ class Agent:
     def _norm(o: str) -> str:                                # canonicalize spacing/case for fuzzy legal match
         return " ".join(str(o).upper().replace("-", " - ").split())
 
-    def _resolve(self, raw: list, flat: list[str], legal: dict[str, list[str]]) -> list[str]:
-        """Map LLM output -> legal orders deterministically: number index OR fuzzy string; 1/unit; missing=hold.
-        Every unit gets exactly one legal order so units never silently freeze; drops are logged with reason."""
+    def _resolve(self, raw: list, flat: list[str]) -> list[str]:
+        """Map LLM output -> legal orders: number index OR fuzzy string; one per unit. Unset units = engine holds.
+        Drops logged with reason. No hold-fill: leaving a unit unordered already means hold (engine default)."""
         canon = {self._norm(o): o for o in flat}
         by_unit: dict[str, str] = {}                         # orderable loc -> chosen legal order
         for o in raw:
@@ -55,9 +55,7 @@ class Agent:
             loc = hit.split()[1]
             if loc in by_unit: log.warning("%s 丢弃重复令: %r (该单位已下)", self.country, o)
             else: by_unit[loc] = hit
-        for loc, opts in legal.items():                      # fill any unset unit with its hold (deterministic floor)
-            by_unit.setdefault(loc, next((o for o in opts if o.endswith(" H")), opts[0] if opts else None))
-        return [o for o in by_unit.values() if o]
+        return list(by_unit.values())
 
     def _order_prompt(self, eng: OperationEngine, flat: list[str]) -> str:
         n = len(eng.legal_orders(self.country))
@@ -107,7 +105,7 @@ class Agent:
         flat = self._legal_flat(eng)
         prompt = self._order_prompt(eng, flat) + self._stab_cue(eng)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
-        chosen = self._resolve(out.orders if out else [], flat, eng.legal_orders(self.country))  # index/fuzzy; missing=hold
+        chosen = self._resolve(out.orders if out else [], flat)  # index/fuzzy; unset units = engine holds
         yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
         for o in chosen:
             self.mem.record_action(yr, self.country, o)
