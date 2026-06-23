@@ -117,6 +117,7 @@ class Agent:
         prompt = self._order_prompt(eng, flat) + self._stab_cue(eng)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
         chosen = self._resolve(out.orders if out else [], flat)  # index/fuzzy; unset units = engine holds
+        if not chosen: log.warning("%s 本回合零命令(全hold): 模型返回 %s", self.country, (out.orders if out else "无"))
         yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
         for o in chosen:
             self.mem.record_action(yr, self.country, o)
