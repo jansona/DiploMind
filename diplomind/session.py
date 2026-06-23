@@ -56,7 +56,7 @@ class Session:
                         for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
-        self.chronicle: list[str] = []; self._opened: set[str] = set()
+        self.chronicle: list[str] = []; self._opened: dict[str, set] = {}   # opener-only pre-opened tabs (recipient sees on first msg)
         self.history: list[dict] = [{"phase": self.eng.phase(), **self.eng.centers()}]  # center counts per phase, for chart
         self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
         self._horders: dict[str, list[str]] = {}; self._settling = False   # per-human submitted orders; settle once
@@ -85,7 +85,7 @@ class Session:
 
     def _start_round(self) -> None:
         self._done = {}; self._hmsgs = {}                # per-round submissions (human up to 3 msgs)
-        ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}
+        ib = {c: self.bus.inbox(c, self.round - 1, phase=self.eng.phase()) for c in self.ai}
         for c, p in self.ai.items():
             spawn(self._run(c, p, ib[c]))   # AIs draft in parallel
 
@@ -125,13 +125,14 @@ class Session:
         if self.pending() or self.round in self._committed:
             return
         self._committed.add(self.round)
+        ph = self.eng.phase()
         for c, v in self._done.items():
             for m in (v if isinstance(v, list) else [v]):   # human may stage up to 3, AI one
                 if m and m.content.strip():
-                    self.bus.post(self.round, c, m.type, m.recipient, m.content)
-        log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round))
+                    self.bus.post(self.round, c, m.type, m.recipient, m.content, ph)
+        log.info("R%d 齐, 投递推进; 静默=%s", self.round, self.bus.round_silent(self.round, ph))
         self.round += 1; self._cog = True            # cognition once per phase
-        if self.round > self.rounds or self.bus.round_silent(self.round - 1):
+        if self.round > self.rounds or self.bus.round_silent(self.round - 1, ph):
             self.mode = "ORDERS"; self._horders = {}; log.info("转下令")
             if not self.humans:                           # all-AI spectate: auto-settle + next phase
                 spawn(self._auto_spectate())
@@ -144,7 +145,8 @@ class Session:
             await self.begin_phase()
 
     def open_private(self, power, recipients) -> str:
-        key = "·".join(sorted({power, *[r.upper() for r in recipients]})); self._opened.add(key); return key
+        key = "·".join(sorted({power, *[r.upper() for r in recipients]}))
+        self._opened.setdefault(power, set()).add(key); return key       # only opener sees empty tab; others on first msg
 
     def legal(self, power=None) -> list[str]:
         power = power or self.human
@@ -193,7 +195,7 @@ class Session:
             except Exception as e:                        # LLM/parse fail -> local fallback, but log why
                 log.warning("年度总结失败, 回退本地: %s", e)
                 self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
-            self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"; self._committed = set(); self._horders = {}
+            self.round = 1; self.mode = "NEGO"; self._committed = set(); self._horders = {}   # keep bus: cross-phase chat history
             for a in self.ai.values(): a.mem.tick()
             return {"phase": nxt, "end": self._end()}
         finally:
@@ -249,7 +251,7 @@ class Session:
         s.end_rule = b.get("end_rule", s.end_rule)
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
         for m in b.get("msgs", []):                      # restore chat history
-            s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"])
+            s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"], m.get("phase", ""))
         for c, snap in (b.get("mem") or {}).items():     # restore AI memory (relations/actions/diary)
             if c in s.ai:
                 s.ai[c].mem.restore(snap)
@@ -258,8 +260,7 @@ class Session:
     def state(self, power=None) -> dict:
         power = power if power is not None else self.human
         chans = self.bus.channels(power, self.round)        # spectate(power=None): privates auto-hidden, 群聊 visible
-        for k in self._opened:                              # only show a pre-opened private to its own members
-            if power and power in k.split("·"): chans.setdefault(k, [])
+        for k in self._opened.get(power, set()): chans.setdefault(k, [])   # opener-only empty tab; recipient gets it on first msg
         hmsgs = self._hmsgs.get(power, [])
         return {"human": power, "humans": self.humans, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,
                 "pending": self.pending(), "human_done": power in self._done, "your_turn": self.your_turn(power),

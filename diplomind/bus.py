@@ -13,39 +13,39 @@ class Msg:
     scope: str          # broadcast / private
     to: list[str]
     text: str
+    phase: str = ""      # game phase (S1901M…) so history persists across phases
 
 
 class MessageBus:
     def __init__(self) -> None:
         self.msgs: list[Msg] = []
 
-    def post(self, rnd: int, sender: str, scope: str, to: list[str], text: str) -> None:
+    def post(self, rnd: int, sender: str, scope: str, to: list[str], text: str, phase: str = "") -> None:
         if text.strip():
-            self.msgs.append(Msg(rnd, sender, scope, to, text))
+            self.msgs.append(Msg(rnd, sender, scope, to, text, phase))
 
-    def round_silent(self, rnd: int) -> bool:
-        return not any(m.rnd == rnd for m in self.msgs)
+    def round_silent(self, rnd: int, phase: str = "") -> bool:
+        return not any(m.rnd == rnd and m.phase == phase for m in self.msgs)
 
     def channels(self, power: str, upto_round: int) -> dict[str, list[str]]:
-        """Group power-visible msgs by channel: broadcast + each private combo (key=sorted members), per round."""
+        """Group power-visible msgs by channel; full cross-phase history, labelled phase+round."""
         out: dict[str, list[str]] = {"群聊": []}
         for m in self.msgs:
-            if m.rnd > upto_round:
-                continue
             who = f"我({power})" if m.sender == power else m.sender
+            tag = f"{m.phase[:5]} R{m.rnd}" if m.phase else f"R{m.rnd}"   # 哪相哪轮
             if m.scope == "broadcast":
-                out["群聊"].append(f"R{m.rnd} {who}: {m.text}")
+                out["群聊"].append(f"{tag} {who}: {m.text}")
                 continue
             members = sorted({m.sender, *m.to})
             if power not in members:
                 continue                                    # private not involving me hidden
-            out.setdefault("·".join(members), []).append(f"R{m.rnd} {who}: {m.text}")
+            out.setdefault("·".join(members), []).append(f"{tag} {who}: {m.text}")
         return out
 
-    def inbox(self, power: str, upto_round: int, include_self: bool = False, recent: int = 2) -> str:
+    def inbox(self, power: str, upto_round: int, include_self: bool = False, recent: int = 2, phase: str = "") -> str:
         lines = []
         for m in self.msgs:
-            if m.rnd > upto_round or m.rnd <= upto_round - recent:   # only last `recent` rounds (compact)
+            if (phase and m.phase != phase) or m.rnd > upto_round or m.rnd <= upto_round - recent:  # current phase, last `recent` rounds
                 continue
             who = f"我({power})" if m.sender == power else m.sender
             if m.scope == "broadcast":                       # broadcast visible to all (incl self)

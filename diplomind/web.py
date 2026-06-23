@@ -145,7 +145,10 @@ async def orders(r: OrdReq):
     room = room_of(r.token)
     if not room or room.status != "playing": return {"ok": False, "reason": "未在对局中"}
     room.short.discard(room.seat_of(r.token))
-    res = await room.session.submit_orders(room.seat_of(r.token), r.orders); _bump(room); return res
+    res = await room.session.submit_orders(room.seat_of(r.token), r.orders)
+    if res.get("phase") and not res.get("build"):    # settled to a fresh phase: kick off next round (AI cognition+nego)
+        spawn(room.session.begin_phase())
+    _bump(room); return res
 
 @app.post("/api/save")
 def save(token: str | None = None, name: str = "auto"):
