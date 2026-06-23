@@ -56,6 +56,7 @@ class Session:
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
         self.chronicle: list[str] = []; self._opened: set[str] = set()
+        self.history: list[dict] = [{"phase": self.eng.phase(), **self.eng.centers()}]  # center counts per phase, for chart
         self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
         self._horders: dict[str, list[str]] = {}; self._settling = False   # per-human submitted orders; settle once
 
@@ -181,6 +182,7 @@ class Session:
                     self.mode = "ORDERS"; self._horders = {}; return {"phase": nxt, "build": True, "end": None}
                 self.eng.auto_resolve(); nxt = self.eng.process()
             log.info("结算 -> %s", nxt)
+            self.history.append({"phase": nxt, **self.eng.centers()})   # snapshot centers each phase for the chart
             pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
             try:                                          # AI yearly summary (alliances/enmities/troops), same LLM
                 self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
@@ -229,7 +231,7 @@ class Session:
         blob = {"human": self.human, "humans": self.humans, "max_year": self.max_year, "lang": self.lang,
                 "board": self.eng.save(), "chronicle": self.chronicle, "persona_key": self.persona_key,
                 "round": self.round, "mode": self.mode, "msgs": [vars(m) for m in self.bus.msgs],   # chat history
-                "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
+                "history": self.history, "mem": {c: a.mem.snapshot() for c, a in self.ai.items()}}
         (self.SAVES / f"{name}.json").write_text(json.dumps(blob, ensure_ascii=False)); return {"saved": name}
 
     @classmethod
@@ -239,7 +241,7 @@ class Session:
             raise FileNotFoundError(f"save not found: {name}")
         b = json.loads(f.read_text())
         s = cls(b.get("humans", b["human"]), b["max_year"], b.get("lang", "zh-Hans"), personas=b.get("persona_key"))
-        s.eng.load(b["board"]); s.chronicle = b["chronicle"]
+        s.eng.load(b["board"]); s.chronicle = b["chronicle"]; s.history = b.get("history") or s.history
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
         for m in b.get("msgs", []):                      # restore chat history
             s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"])
@@ -263,7 +265,8 @@ class Session:
                 # ORDERS phase: who still owes orders (humans until submit; 6 AI decide on submit)
                 "order_pending": (sorted(p for p in self.humans if p not in self._horders) + sorted(self.ai))
                                  if self.mode == "ORDERS" else [],
-                "legal": self.legal(power) if self.mode == "ORDERS" else []}
+                "legal": self.legal(power) if self.mode == "ORDERS" else [],
+                "end": self.eng.check_end(self.max_year), "history": self.history}  # winner/draw + center chart data
 
 
 class Msg:

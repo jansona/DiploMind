@@ -10,7 +10,7 @@
 <h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
 <div id=game class=v><h2>DiploMind <b id=rname></b> 房<b id=rc></b> — <b id=h></b></h2>
 <span id=oc class=v><button onclick=start()>开局 Start</button><button onclick=pause()>暂停/继续</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢人<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
-<button onclick=invite()>邀请链接</button><button onclick=save()>存档</button><button onclick=toMenu()>主菜单</button><button onclick=guide()>Guide</button>
+<button onclick=invite()>邀请链接</button><button onclick=save()>存档</button><button onclick=showres()>结算</button><button onclick=toMenu()>主菜单</button><button onclick=guide()>Guide</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span> <span class=r id=tm></span> <span class=r id=dc></span>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
 <div id=map style=border:1px solid #ccc;max-height:420px;overflow:auto></div>
@@ -18,6 +18,7 @@
 <h3>聊天</h3><div id=tabs></div><span id=pk></span><button onclick=newp()>开私聊</button><div id=log></div>
 <div id=nego><input id=t size=46 placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button> <span class=p id=st></span><div id=stg class=p></div></div>
 <div id=ord style=display:none><div id=os style=max-height:160px;overflow:auto;border:1px solid #ccc;padding:4px></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
+<div id=result class=v><h3>最终结算</h3><div id=res></div><div id=chart></div></div>
 <h3>编年史</h3><div id=ch></div>
 <div id=inside class=v><button onclick=dbg()>看内脏</button><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
 <script>
@@ -62,7 +63,8 @@ S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
 bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp+' ('+(s.msgs_left==undefined?3:s.msgs_left)+'条可发)':(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳等待…'));
 S(stg,(s.staged_msgs&&s.staged_msgs.length)?'📝本轮待投递('+s.staged_msgs.length+'/3,轮末统一送达): '+s.staged_msgs.join(' | '):'');
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';ord.querySelector('button').disabled=false}
-if(s.phase!=mphase){mphase=s.phase;fetch('/api/map?token='+TOK).then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle?token='+TOK).then(d=>ch.textContent=d.text)}}
+if(s.phase!=mphase){mphase=s.phase;fetch('/api/map?token='+TOK).then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle?token='+TOK).then(d=>ch.textContent=d.text)}
+window._last=s;if(s.end){result.className='';drawres(s)}}
 function ui(){bs.textContent=L.send||'发送';bk.textContent=L.skip||'跳过';ord.querySelector('button').textContent=L.sub||'下令并结算'}
 async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n+'&token='+TOK,'POST')}
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\n')+'\n\n地名:\n'+d.locs.join('\n')}
@@ -72,6 +74,13 @@ let r=await G('/api/say','POST',{token:TOK,scope,recipient:to,content:t.value,sk
 function oupd(){osel.textContent=[...os.querySelectorAll(':checked')].map(c=>c.value).join('; ')||'(无)'}
 async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部原地?'))return;let b=event.target;b.disabled=true;os.querySelectorAll('input').forEach(c=>c.disabled=true);st.textContent=L.settle;await G('/api/orders','POST',{token:TOK,orders:o})}
 async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot?token='+TOK),null,1)}
+let COL={AUSTRIA:'#c00',ENGLAND:'#333',FRANCE:'#06c',GERMANY:'#777',ITALY:'#0a0',RUSSIA:'#c0c',TURKEY:'#c60'};
+function showres(){result.className=result.className?'':'v';if(!result.className)drawres(window._last||{})}
+function drawres(s){let e=s.end;res.innerHTML=e?(e.winner?'🏆 '+e.winner+' 单独获胜('+e.centers+'中心)':e.draw?'🤝 和局, 幸存: '+(e.survivors||[]).join(', '):''):'对局进行中…';
+let h=s.history||[];if(h.length<2){chart.innerHTML='';return}let P=Object.keys(COL),W=680,H=200,x=i=>30+i*(W-50)/(h.length-1),y=v=>H-20-v*(H-40)/18;
+let g='<svg width=100% viewBox="0 0 '+W+' '+H+'" style="border:1px solid #ccc"><line x1=30 y1='+y(0)+' x2='+W+' y2='+y(0)+' stroke=#ccc/><text x=2 y='+y(18)+' font-size=10>18</text>';
+g+=P.map(p=>'<polyline fill=none stroke="'+COL[p]+'" stroke-width=2 points="'+h.map((r,i)=>x(i)+','+y(r[p]||0)).join(' ')+'"/>'+'<text x='+(W-2)+' y='+y(h[h.length-1][p]||0)+' font-size=9 fill="'+COL[p]+'" text-anchor=end>'+p.slice(0,3)+'</text>').join('');
+chart.innerHTML=g+'</svg>'}
 async function resume(){try{let d=JSON.parse(localStorage.dm||'{}');if(d.TOK&&(await G('/api/state?token='+d.TOK)).mode!='MENU'){TOK=d.TOK;CODE=d.CODE;L=d.L||{};enter();return true}}catch(e){}return false}
 let q=new URLSearchParams(location.search).get('join');if(q){jc.value=q;toSetup()}else resume().then(ok=>ok||toMenu())
 </script>

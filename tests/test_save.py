@@ -38,3 +38,11 @@ def test_human_not_ai_and_mem_restored():
     s.ai["GERMANY"].mem.apply_attitude({"ITALY": {"trust": 55, "attitude": "盟友"}}); s.save()
     s2 = Session.load()
     assert s2.ai["GERMANY"].mem.relation("ITALY").trust == 55  # memory restored
+
+
+def test_history_tracked_and_saved():
+    s = Session("FRANCE", max_year=1902)
+    assert s.history and s.history[0]["phase"] == "S1901M" and s.history[0]["FRANCE"] == 3
+    s.eng.submit("FRANCE", ["A PAR - BUR"]); s.eng.process(); s.history.append({"phase": s.eng.phase(), **s.eng.centers()})
+    s.save("hist"); s2 = Session.load("hist")
+    assert len(s2.history) == 2 and s2.history[1]["phase"] == s.eng.phase()   # chart data persists
