@@ -53,3 +53,15 @@ def test_returning_token_skips_passcode():
     m = RoomManager(); r = m.create("t", "Al", "FRANCE", passcode="1234")
     ok, tok = m.join(r.code, "GERMANY", "Bo", None, passcode="1234"); assert ok
     again, _ = m.join(r.code, "GERMANY", "Bo", tok, passcode=""); assert again is r   # known token, no passcode needed
+
+
+def test_transfer_and_secs_and_dropped():
+    import time
+    m = RoomManager(); r = m.create("t", "Al", "FRANCE"); m.join(r.code, "GERMANY", "Bo", None); r.start()
+    g = r.seats["GERMANY"]["token"]
+    assert r.transfer("GERMANY") and r.owner == g                  # ownership handed to Bo
+    assert not r.transfer("RUSSIA")                                # RUSSIA is AI, not a human seat
+    r.set_secs(90); assert r.secs == 90 and r.timer_on
+    r.set_secs(0); assert r.secs == 0 and not r.timer_on           # 0 = no clock
+    r.touch("FRANCE"); assert "FRANCE" not in r.dropped()          # just pinged
+    assert "GERMANY" in r.dropped()                                # never pinged -> dropped

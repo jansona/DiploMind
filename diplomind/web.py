@@ -90,22 +90,35 @@ def end(r: TokReq):
     if room and r.token == room.owner: room.status = "ended"; _bump(room)
     return {"ok": True}
 
-@app.post("/api/room/timer")     # owner toggles the per-round human clock on/off
-def timer(r: TokReq):
+class SecsReq(BaseModel):
+    token: str | None = None; secs: int = 180
+class XferReq(BaseModel):
+    token: str | None = None; power: str = ""
+
+@app.post("/api/room/secs")      # owner sets round clock seconds; 0 = no clock
+def secs(r: SecsReq):
     room = room_of(r.token)
-    if room and r.token == room.owner:
-        room.timer_on = not room.timer_on; room.deadline = None; room.short.clear(); _bump(room)
-    return {"timer_on": room.timer_on if room else True}
+    if room and r.token == room.owner: room.set_secs(r.secs); _bump(room)
+    return {"secs": room.secs, "timer_on": room.timer_on} if room else {}
+
+@app.post("/api/room/transfer")  # owner hands ownership to another seated human
+def transfer(r: XferReq):
+    room = room_of(r.token)
+    if room and r.token == room.owner and room.transfer(r.power): _bump(room)
+    return {"ok": True}
 
 @app.get("/api/state")
 def state(token: str | None = None):
     room = room_of(token)
     if not room or not room.session:
         return {"mode": "MENU", "phase": "-", "debug": DEBUG}
-    s = room.session.state(room.seat_of(token)); s["debug"] = DEBUG
+    seat = room.seat_of(token); room.touch(seat)             # client ping -> alive
+    s = room.session.state(seat); s["debug"] = DEBUG
     s["room"] = room.code; s["rname"] = room.name; s["status"] = room.status; s["owner"] = token == room.owner
     s["secs_left"] = max(0, int(room.deadline - time.time())) if room.deadline and room.timer_on else None
-    s["timer_on"] = room.timer_on
+    s["timer_on"] = room.timer_on; s["secs"] = room.secs
+    s["short"] = sorted(room.short); s["dropped"] = room.dropped()   # 30s-penalty / disconnected seats
+    s["seats"] = room.humans()
     return s
 
 @app.post("/api/say")
@@ -188,7 +201,7 @@ async def stream(code: str, token: str | None = None):
     async def gen():
         last = ""
         for _ in range(7200):                            # ~1h cap; client reconnects
-            cur = json.dumps(state(token))               # push on any state diff (AI advances don't _bump)
+            cur = json.dumps(state(token))               # also touches seat (heartbeat); push on any diff
             if cur != last:
                 last = cur; yield f"data: {cur}\n\n"
             await asyncio.sleep(0.5)
@@ -196,9 +209,10 @@ async def stream(code: str, token: str | None = None):
 
 # --- timer ticker: humans-only round clock; timeout = skip/hold, then 30s penalty until response ---
 async def _ticker():
-    seen: dict[str, tuple] = {}
+    seen: dict[str, tuple] = {}; n = 0
     while True:
-        await asyncio.sleep(1)
+        await asyncio.sleep(1); n += 1
+        if n % 60 == 0: RM.gc()                              # reap ended/idle rooms each minute
         for room in list(RM.rooms.values()):
             s = room.session
             if not s or room.status != "playing" or not room.timer_on or not room.humans():

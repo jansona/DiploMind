@@ -56,3 +56,14 @@ def test_save_load_continue():
         nd = c.post("/api/load", params={"name": "wtest"}).json()
         s = c.get("/api/state", params={"token": nd["token"]}).json()
         assert s["human"] == "FRANCE" and s["mode"] != "MENU" and s["owner"]   # reopened, continues
+
+
+def test_transfer_secs_endpoints():
+    with TestClient(app) as c:
+        d = c.post("/api/room/create", json={"power": "FRANCE"}).json()
+        j = c.post("/api/room/join", json={"code": d["code"], "power": "GERMANY"}).json()
+        c.post("/api/room/start", json={"token": d["token"]})
+        assert c.post("/api/room/secs", json={"token": d["token"], "secs": 0}).json()["timer_on"] is False
+        c.post("/api/room/transfer", json={"token": d["token"], "power": "GERMANY"})
+        assert not c.get("/api/state", params={"token": d["token"]}).json()["owner"]   # owner moved to Bo
+        assert c.get("/api/state", params={"token": j["token"]}).json()["owner"]

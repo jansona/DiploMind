@@ -34,6 +34,7 @@ class Room:
         self.session: Session | None = None
         self.deadline: float | None = None       # round timeout epoch
         self.short: set[str] = set()              # powers on 30s penalty until they respond
+        self.seen: dict[str, float] = {}          # power -> last client ping; stale = disconnected
 
     def claim(self, power: str, name: str, token: str) -> bool:
         if self.status != "lobby" or power not in POWERS: return False
@@ -46,6 +47,20 @@ class Room:
 
     def seat_of(self, token: str) -> str | None:
         return next((p for p, s in self.seats.items() if s["token"] == token), None)
+
+    def touch(self, power: str) -> None:          # client ping (state/stream): mark seat alive
+        if power: self.seen[power] = self.active = time.time()
+
+    def dropped(self, grace: int = 25) -> list[str]:   # humans silent past grace = disconnected
+        now = time.time(); return [p for p in self.humans() if now - self.seen.get(p, 0) > grace]
+
+    def transfer(self, to: str) -> bool:          # hand ownership to a seated human
+        if to in self.seats and self.seats[to]["kind"] == "human":
+            self.owner = self.seats[to]["token"]; return True
+        return False
+
+    def set_secs(self, s: int) -> None:           # 0 = no clock; else seconds/round
+        self.secs = max(0, int(s)); self.timer_on = self.secs > 0; self.deadline = None; self.short.clear()
 
     def start(self) -> None:
         self.session = Session(self.humans(), self.max_year, self.lang)   # AI fills open seats

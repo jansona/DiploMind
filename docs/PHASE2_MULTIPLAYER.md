@@ -39,8 +39,10 @@ Session: humans[] 已有 → 收口 say(power)/submit(power)/state(power); token
 ## 收尾(2026-06-23)
 ✅ 旧单局 ui_* 脚本已删; ✅ 计时器开关(owner /api/room/timer + ui 按钮); ✅ 默认 AI 服务=deepseek(conf/deepseek.json, 本地 ollama 用 DIPLOMIND_CONFIG)。
 
+✅ 房主转让(下拉)、闲置 gc 每分钟、掉线/短钟 UI 标记、计时秒数下拉(90/180/300/不限)、口令记 token 免重输。
+
 ## 待打磨
-房主转让UI、踢人、断线提示;移动端;多局压测。
+踢人;整局到胜负;移动端;多局压测;CI(GitHub Actions 跑 pytest)。
 
 ## 不做（避免范围蔓延）
 账号系统、公网部署、WebSocket 双向、大厅排行——超出 LAN 自用。
