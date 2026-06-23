@@ -1,5 +1,6 @@
-<!doctype html><meta charset=utf-8><title>DiploMind</title>
-<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}#ch{white-space:pre-wrap}select{width:100%}.p{color:#c60}.r{color:#c00}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}#rooms button{display:block;margin:2px 0}</style>
+<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>DiploMind</title>
+<style>body{font:13px monospace;margin:1em;max-width:760px}#log{white-space:pre-wrap;border:1px solid #ccc;padding:6px;height:150px;overflow:auto}#ch{white-space:pre-wrap}select{width:100%}.p{color:#c60}.r{color:#c00}#tabs button{font:12px monospace;margin:1px}#tabs .on{background:#c60;color:#fff}.v{display:none}#rooms button{display:block;margin:2px 0}
+@media(max-width:600px){body{margin:.4em;font-size:15px;overflow-wrap:anywhere}input,button,#hsel,#jp,#lsel{font-size:16px;min-height:36px;margin:2px 0}#t{width:88%}#oc select{min-height:36px;font-size:15px}#os label,#tabs button{font-size:15px;line-height:2}#map{max-height:300px}#map svg{max-width:100%;height:auto}#log{height:120px}}</style>
 <div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button> <button onclick=lobby()>刷新房间</button>
 <h3>当前棋局 <span id=rcount></span></h3><div id=rooms></div><h3>继续存档</h3><div id=saves></div></div>
 <div id=setup class=v><h2>新游戏</h2>房名 <input id=rn size=20 placeholder=桌名> 昵称 <input id=nm size=12 value=Host>

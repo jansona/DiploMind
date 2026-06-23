@@ -43,8 +43,10 @@ Session: humans[] 已有 → 收口 say(power)/submit(power)/state(power); token
 
 ✅ 踢人(座位转AI, 预留性格+空记忆); ✅ 重连风暴压测(6房12座480操作 0错 p95~110ms); ✅ CI(GitHub Actions)。
 
+✅ 轻量响应式(viewport+@media≤600px, 一套 ui.html, PC 零回归, 手机无横向溢出)。
+
 ## 待打磨
-整局到胜负;移动端;deepseek 多局真压(费用)。
+整局到胜负;手机命令点选(地图点下令);deepseek 多局真压(费用)。
 
 ## 不做（避免范围蔓延）
 账号系统、公网部署、WebSocket 双向、大厅排行——超出 LAN 自用。
