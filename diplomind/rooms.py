@@ -59,6 +59,13 @@ class Room:
             self.owner = self.seats[to]["token"]; return True
         return False
 
+    def kick(self, power: str) -> str:            # remove a human seat: AI takes over if playing; returns freed token
+        s = self.seats.get(power)
+        if not s or s["kind"] != "human" or s["token"] == self.owner: return ""   # owner can't kick self
+        self.seats.pop(power); self.short.discard(power); self.seen.pop(power, None)
+        if self.session: self.session.aiify(power)
+        return s["token"]
+
     def set_secs(self, s: int) -> None:           # 0 = no clock; else seconds/round
         self.secs = max(0, int(s)); self.timer_on = self.secs > 0; self.deadline = None; self.short.clear()
 
@@ -92,6 +99,11 @@ class RoomManager:
         self.tokens[tok] = code
         if power: r.claim(power, name, tok)
         return r, tok
+
+    def kick(self, code: str, power: str) -> bool:    # owner kicks a seat; invalidate its token
+        r = self.rooms.get(code); tok = r.kick(power) if r else ""
+        if tok: self.tokens.pop(tok, None)
+        return bool(tok)
 
     def list(self) -> list[dict]:
         return [r.summary() for r in self.rooms.values() if r.status != "ended"]

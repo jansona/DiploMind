@@ -65,3 +65,12 @@ def test_transfer_and_secs_and_dropped():
     r.set_secs(0); assert r.secs == 0 and not r.timer_on           # 0 = no clock
     r.touch("FRANCE"); assert "FRANCE" not in r.dropped()          # just pinged
     assert "GERMANY" in r.dropped()                                # never pinged -> dropped
+
+
+def test_kick_aiify():
+    m = RoomManager(); r = m.create("t", "Al", "FRANCE"); _, gtok = m.join(r.code, "GERMANY", "Bo", None); r.start()
+    assert r.session.humans == ["FRANCE", "GERMANY"] and "GERMANY" not in r.session.ai
+    assert m.kick(r.code, "GERMANY") and "GERMANY" not in r.seats          # seat freed
+    assert r.session.humans == ["FRANCE"] and "GERMANY" in r.session.ai     # AI took over w/ persona
+    assert r.session.persona_of["GERMANY"] and m.tokens.get(gtok) is None   # blank-mem agent, token invalidated
+    assert not m.kick(r.code, "FRANCE")                                     # can't kick owner

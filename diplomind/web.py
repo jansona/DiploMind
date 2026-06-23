@@ -107,6 +107,12 @@ def transfer(r: XferReq):
     if room and r.token == room.owner and room.transfer(r.power): _bump(room)
     return {"ok": True}
 
+@app.post("/api/room/kick")      # owner kicks a human seat -> AI takes over (blank persona memory)
+def kick(r: XferReq):
+    room = room_of(r.token)
+    if room and r.token == room.owner: RM.kick(room.code, r.power); _bump(room)
+    return {"ok": True}
+
 @app.get("/api/state")
 def state(token: str | None = None):
     room = room_of(token)

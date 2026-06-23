@@ -66,6 +66,18 @@ class Session:
     def ai_players(self):
         return [p for p in self.players.values() if isinstance(p, AIPlayer)]
 
+    def aiify(self, power: str) -> bool:
+        """Kick/abandon: a human seat becomes AI using its pre-assigned persona + blank memory."""
+        if power not in self.humans:
+            return False
+        self.humans.remove(power); self.human = self.humans[0] if self.humans else None
+        agent = Agent(power, PERSONAS[self.persona_key[power]], self.gw, self.lang)
+        self.players[power] = AIPlayer(agent); self.ai[power] = agent; self.persona_of[power] = agent.persona.name
+        self._done.setdefault(power, None); self._horders.pop(power, None)   # unblock current round
+        try: asyncio.get_running_loop(); spawn(self._maybe_advance())        # AI takes over next round / settle
+        except RuntimeError: pass                                            # no loop (sync test): advance lazily
+        return True
+
     def _start_round(self) -> None:
         self._done = {}; self._hmsgs = {}                # per-round submissions (human up to 3 msgs)
         ib = {c: self.bus.inbox(c, self.round - 1) for c in self.ai}

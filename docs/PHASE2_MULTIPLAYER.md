@@ -41,8 +41,10 @@ Session: humans[] 已有 → 收口 say(power)/submit(power)/state(power); token
 
 ✅ 房主转让(下拉)、闲置 gc 每分钟、掉线/短钟 UI 标记、计时秒数下拉(90/180/300/不限)、口令记 token 免重输。
 
+✅ 踢人(座位转AI, 预留性格+空记忆); ✅ 重连风暴压测(6房12座480操作 0错 p95~110ms); ✅ CI(GitHub Actions)。
+
 ## 待打磨
-踢人;整局到胜负;移动端;多局压测;CI(GitHub Actions 跑 pytest)。
+整局到胜负;移动端;deepseek 多局真压(费用)。
 
 ## 不做（避免范围蔓延）
 账号系统、公网部署、WebSocket 双向、大厅排行——超出 LAN 自用。

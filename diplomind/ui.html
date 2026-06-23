@@ -8,7 +8,7 @@
 <button onclick=create()>建房 Create</button> <button onclick=toMenu()>返回</button>
 <h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
 <div id=game class=v><h2>DiploMind <b id=rname></b> 房<b id=rc></b> — <b id=h></b></h2>
-<span id=oc class=v><button onclick=start()>开局 Start</button><button onclick=pause()>暂停/继续</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select><button onclick=end()>结束</button></span>
+<span id=oc class=v><button onclick=start()>开局 Start</button><button onclick=pause()>暂停/继续</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢人<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
 <button onclick=invite()>邀请链接</button><button onclick=save()>存档</button><button onclick=toMenu()>主菜单</button><button onclick=guide()>Guide</button>
 <b id=ph></b> <span id=md></span> 轮<span id=rd></span> 待发:<span class=p id=pd></span> <span class=r id=tm></span> <span class=r id=dc></span>
 <pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto></pre>
@@ -38,6 +38,7 @@ async function start(){await G('/api/room/start','POST',{token:TOK})}
 async function pause(){await G('/api/room/pause','POST',{token:TOK})}
 async function setsecs(){await G('/api/room/secs','POST',{token:TOK,secs:+secsel.value})}
 async function doxfer(){let p=xfer.value;if(p&&confirm('转让房主给 '+p+'?'))await G('/api/room/transfer','POST',{token:TOK,power:p})}
+async function dokick(){let p=kick.value;if(p&&confirm('踢出 '+p+'? 该位转 AI 接管'))await G('/api/room/kick','POST',{token:TOK,power:p});kick.value=''}
 async function end(){if(confirm('结束本局?')){await G('/api/room/end','POST',{token:TOK});toMenu()}}
 function invite(){prompt('分享链接',location.origin+'/?join='+CODE)}
 function enter(){ui();show('game');act='群聊';keys='';legal='';pk.innerHTML='';if(es)es.close();es=new EventSource('/api/stream/'+CODE+'?token='+TOK);es.onmessage=e=>R(JSON.parse(e.data))}
@@ -47,7 +48,7 @@ function R(s){if(s.mode=='MENU'){S(rc,CODE);oc.className='';bs.disabled=bk.disab
 inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');S(rname,s.rname||'');S(rc,s.room||CODE);oc.className=s.owner?'':'v';
 S(tm,s.secs_left!=null?'⏱'+s.secs_left+'s':(s.status=='paused'?'⏸暂停':(s.timer_on?'':'计时关')));
 S(dc,((s.dropped&&s.dropped.length)?'⚠掉线:'+s.dropped.join(','):'')+((s.short&&s.short.length)?' ⏱短钟:'+s.short.join(','):''));
-if(s.owner){let xo='<option value=>转让给…</option>'+(s.seats||[]).filter(p=>p!=s.human).map(p=>'<option>'+p+'</option>').join('');if(xfer.innerHTML!=xo)xfer.innerHTML=xo;secsel.value=s.timer_on?s.secs:0}
+if(s.owner){let oth=(s.seats||[]).filter(p=>p!=s.human);let xo='<option value=>转让给…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(xfer.innerHTML!=xo)xfer.innerHTML=xo;let ko='<option value=>踢出…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(kick.innerHTML!=ko)kick.innerHTML=ko;secsel.value=s.timer_on?s.secs:0}
 S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
 if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
 chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
