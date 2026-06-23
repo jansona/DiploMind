@@ -32,10 +32,18 @@ def test_neutral_and_endcheck():
     eng = OperationEngine(["FRANCE"])
     assert len(eng.dummy_powers) == 6                 # 1 活 6 中立
     end = eng.check_end(max_year=1900)
-    assert end["draw"] and end["survivors"]           # 到上限 → 存活玩家和局
+    assert end["winner"] == "RUSSIA" and end["centers"] == 4   # 到上限 → 中心最多者胜(俄4)
 
 
 def test_last_orders():
     eng = OperationEngine(["FRANCE"])
     eng.submit("FRANCE", ["A PAR - BUR"]); eng.process()
     assert eng.last_orders().get("FRANCE") == ["A PAR - BUR"]   # 上回合命令可感知
+
+
+def test_endcheck_most_centers_wins_tie_draws():
+    eng = OperationEngine(["FRANCE", "ENGLAND"])
+    assert eng.check_end(max_year=1900)["winner"] == "RUSSIA"   # RUSSIA 4 = sole top -> wins
+    eng.game.powers["RUSSIA"].centers = ["MOS", "WAR"]          # drop RUSSIA to 2 -> 5-way tie at 3
+    end = eng.check_end(max_year=1900)
+    assert end["draw"] and "RUSSIA" not in end["survivors"]     # tie among co-leaders only

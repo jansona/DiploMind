@@ -89,9 +89,12 @@ class OperationEngine:
             if n >= 18:                                   # 18 centers = solo win
                 return {"winner": p, "centers": n}
         yr = int("".join(filter(str.isdigit, self.phase())) or 0)
-        if yr >= max_year:                                # max year: all survivors (>0 centers) draw
-            survivors = sorted([p for p, n in self.centers().items() if n > 0])
-            return {"draw": True, "survivors": survivors, "centers": self.centers()}
+        if yr >= max_year:                                # max year: most centers wins; tie -> draw among co-leaders
+            cen = self.centers(); top = max(cen.values())
+            leaders = sorted(p for p, n in cen.items() if n == top and n > 0)
+            if len(leaders) == 1:
+                return {"winner": leaders[0], "centers": top}
+            return {"draw": True, "survivors": leaders, "centers": cen}
         return None
 
     def process(self) -> str:
