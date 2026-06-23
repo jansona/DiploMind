@@ -42,14 +42,14 @@ let act='群聊',chans={},mphase='',keys='',legal='',L={},seen={},unread={},TOK=
 function S(el,v){if(el.textContent!=v)el.textContent=v}
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
 function show(v){for(let x of ['menu','setup','game'])document.getElementById(x).className=x==v?'':'v'}
-function save_t(d){TOK=d.token;CODE=d.code;localStorage.dm=JSON.stringify({TOK,CODE,L})}
+function save_t(d){TOK=d.token;CODE=d.code;sessionStorage.dm=JSON.stringify({TOK,CODE,L})}
 async function toMenu(){if(es)es.close();show('menu');lobby()}
 async function lobby(){let r=await G('/api/rooms');rcount.textContent='('+r.rooms.length+')';
 rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked?'🔒':'')+x.name+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
 let m=await G('/api/menu');saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\'ld("'+s+'")\'>'+s+'</button>').join(' ')}
 function toSetup(){show('setup')}
 async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value,passcode:pw.value,end_rule:endsel.value});save_t(d);enter()}
-async function join(){L=await G('/api/i18n/'+lsel.value);let old=(JSON.parse(localStorage.dm||'{}')).TOK;let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value,token:old});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
+async function join(){L=await G('/api/i18n/'+lsel.value);let old=(JSON.parse(sessionStorage.dm||'{}')).TOK;let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value,token:old});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
 function jr(c){jc.value=c;toSetup()}
 async function ld(n){let d=await G('/api/load?name='+n,'POST');save_t(d);L=await G('/api/i18n/zh-Hans');enter()}
 async function start(){await G('/api/room/start','POST',{token:TOK})}
@@ -97,6 +97,6 @@ let h=s.history||[];if(h.length<2){chart.innerHTML='';return}let P=Object.keys(C
 let g='<svg width=100% viewBox="0 0 '+W+' '+H+'" style="border:1px solid #ccc"><line x1=30 y1='+y(0)+' x2='+W+' y2='+y(0)+' stroke=#ccc/><text x=2 y='+y(18)+' font-size=10>18</text>';
 g+=P.map(p=>'<polyline fill=none stroke="'+COL[p]+'" stroke-width=2 points="'+h.map((r,i)=>x(i)+','+y(r[p]||0)).join(' ')+'"/>'+'<text x='+(W-2)+' y='+y(h[h.length-1][p]||0)+' font-size=9 fill="'+COL[p]+'" text-anchor=end>'+p.slice(0,3)+'</text>').join('');
 chart.innerHTML=g+'</svg>'}
-async function resume(){try{let d=JSON.parse(localStorage.dm||'{}');if(d.TOK&&(await G('/api/state?token='+d.TOK)).mode!='MENU'){TOK=d.TOK;CODE=d.CODE;L=d.L||{};enter();return true}}catch(e){}return false}
+async function resume(){try{let d=JSON.parse(sessionStorage.dm||'{}');if(d.TOK&&(await G('/api/state?token='+d.TOK)).mode!='MENU'){TOK=d.TOK;CODE=d.CODE;L=d.L||{};enter();return true}}catch(e){}return false}
 let q=new URLSearchParams(location.search).get('join');if(q){jc.value=q;toSetup()}else resume().then(ok=>ok||toMenu())
 </script>
