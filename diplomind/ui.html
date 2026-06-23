@@ -25,7 +25,7 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 <h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
 <div id=game class=v>
 <div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
-<span style=flex:1></span><span id=oc class=v><button onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
+<span style=flex:1></span><span id=oc class=v><button id=bstart onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
 <button onclick=invite()>邀请</button><button onclick=save()>存档</button><button onclick=showres()>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
 <div id=grid>
 <div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
@@ -62,7 +62,7 @@ function enter(){ui();show('game');act='群聊';keys='';legal='';pk.innerHTML=''
 function pick(k){act=k;unread[k]=0;seen[k]=(chans[k]||[]).length;log.textContent=(chans[k]||[]).join('\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==k?'on':'')}
 async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;let ch=(await G('/api/open','POST',{token:TOK,recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false);keys='';pick(ch)}
 function R(s){if(s.mode=='MENU'){S(rc,CODE);oc.className='';bs.disabled=bk.disabled=t.disabled=true;S(st,'等房主开局');return}
-inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');S(rname,s.rname||'');S(rc,s.room||CODE);oc.className=s.owner?'':'v';
+inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');S(rname,s.rname||'');S(rc,s.room||CODE);oc.className=s.owner?'':'v';bstart.style.display=s.status=='lobby'?'':'none';
 S(tm,s.secs_left!=null?'⏱'+s.secs_left+'s':(s.status=='paused'?'⏸暂停':(s.timer_on?'':'计时关')));
 S(dc,((s.dropped&&s.dropped.length)?'⚠掉线:'+s.dropped.join(','):'')+((s.short&&s.short.length)?' ⏱短钟:'+s.short.join(','):''));
 if(s.owner){let oth=(s.seats||[]).filter(p=>p!=s.human);let xo='<option value=>转让给…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(xfer.innerHTML!=xo)xfer.innerHTML=xo;let ko='<option value=>踢出…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(kick.innerHTML!=ko)kick.innerHTML=ko;secsel.value=s.timer_on?s.secs:0}
