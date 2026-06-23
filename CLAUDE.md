@@ -23,8 +23,8 @@
 
 ## 技术栈
 - 后端 Python 3.11 / uv；复用 `diplomacy` 引擎；FastAPI Web。
-- LLM=任意 OpenAI 兼容 API(默认本地 ollama 4b)。ollama 走原生 `/api/chat`+format约束+think:false；openai 走 `/chat/completions`。宽松JSON解析+并发闸+超时容错+num_predict截尾。勿用 ollama `/v1`(不认 think,慢35×)。
-- 配置 `conf/*.json`(DIPLOMIND_CONFIG)：base_url/api_key/model/api/rounds/lang/concurrency/timeout/human；DIPLOMIND_DEBUG=1 显内脏。
+- LLM=任意 OpenAI 兼容 API(默认 conf/deepseek.json)。ollama 走原生 `/api/chat`+format约束+think:false；openai 走 `/chat/completions`。宽松JSON解析+并发闸+超时容错+num_predict截尾。勿用 ollama `/v1`(不认 think,慢35×)。
+- 配置 `conf/*.json`：默认 deepseek，本地用 `DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json`；字段 base_url/api_key/model/api/rounds/lang/concurrency/timeout/human；DIPLOMIND_DEBUG=1 显内脏。
 
 ## 项目结构
 - `diplomind/engine.py` 操作引擎：地图/合法走子/裁决/撤退造兵/判胜负/存档
@@ -34,17 +34,17 @@
 - `diplomind/memory.py` 记忆：关系/承诺/背叛/diary；`bus.py` 三态消息总线
 - `diplomind/orchestrator.py` 年循环；`chronicle.py` 编年史；`debugpanel.py` 观测
 - `diplomind/web.py` FastAPI 端点(房间/座位/SSE/计时)+`ui.html` 前端(大厅/建房/认领/owner控制)；`rooms.py` 房间注册(多局/token/计时)；`personalities.py` 7性格+语言；`config.py` 配置；`names.py` 地名；`chronicle.py` AI年度史；`i18n/` 界面文案；`conf/presets/` 性格预设
-- `tests/` 65单元/集成；`scripts/` 真跑+playwright(ui_mp=多人房, ui_fixes=单座位回归; 旧 ui_* 用已移除单局端点, 待清)
+- `tests/` 65单元/集成；`scripts/` 真跑+playwright(ui_mp=多人房, ui_fixes=单座位回归)
 
 ## 运行
 ```bash
-uv sync; uv run uvicorn diplomind.web:app --port 8731   # 8731 玩/观战
+uv sync; uv run uvicorn diplomind.web:app --port 8731   # 默认 deepseek; 8731 建房/邀请/多人
 uv run pytest                                           # 测试
-DIPLOMIND_MODEL=qwen3.5:2b DIPLOMIND_LANG=en uv run uvicorn diplomind.web:app
+DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json uv run uvicorn diplomind.web:app  # 本地 ollama
 ```
 
 ## 二期 backlog
-多人房间/邀请;AI调味到"三局看不穿"实测;整局到胜负节奏;好玩杠杆UI(背叛弹原话/关系连线图/称号);移动端;CI;尾延迟。
+多人房间/邀请✓;计时器开关✓;房主转让/踢人UI;断线提示;AI调味到"三局看不穿"实测;整局到胜负节奏;好玩杠杆UI(背叛弹原话/关系连线图/称号);移动端;CI;多局压测。
 
 ## 文档
 [docs/archive/](docs/archive/)：PHASE1(一期归档,先读)、产品定义、技术架构、AI性格风格、RESULTS、DECISIONS、DEMO清单。docs/ 留正式文档。

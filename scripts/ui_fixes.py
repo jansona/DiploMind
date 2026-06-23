@@ -1,4 +1,4 @@
-"""单座位回归(房间版): 建房FR开局→待投递常驻+剩余条数→刷新保活→下令锁checkbox→编年史换行. 起服:8772 qwen2b."""
+"""单座位回归(房间版): 建房FR开局→待投递常驻+剩余条数→刷新保活→下令锁checkbox→编年史换行. 起服:8772 (默认 deepseek)."""
 from playwright.sync_api import sync_playwright
 
 errs = []

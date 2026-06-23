@@ -90,6 +90,13 @@ def end(r: TokReq):
     if room and r.token == room.owner: room.status = "ended"; _bump(room)
     return {"ok": True}
 
+@app.post("/api/room/timer")     # owner toggles the per-round human clock on/off
+def timer(r: TokReq):
+    room = room_of(r.token)
+    if room and r.token == room.owner:
+        room.timer_on = not room.timer_on; room.deadline = None; room.short.clear(); _bump(room)
+    return {"timer_on": room.timer_on if room else True}
+
 @app.get("/api/state")
 def state(token: str | None = None):
     room = room_of(token)

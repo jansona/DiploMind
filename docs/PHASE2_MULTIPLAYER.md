@@ -36,8 +36,11 @@ Session: humans[] 已有 → 收口 say(power)/submit(power)/state(power); token
 5. ✅ **SSE 推送** /api/stream/{code} 按 state diff 推(AI推进也送), 替 2s 轮询。
 6. ✅ **计时器** _ticker 谈判倒计时(仅人类), 超时 skip/hold, 30s 惩罚直到响应; 邀请 /?join=CODE。
 
-## 待打磨(二期收尾)
-房主转让UI、踢人、断线提示;计时器开关UI;移动端;多局压测;ui_mp 全程结算(2b 慢, 现验到跨座位投递)。
+## 收尾(2026-06-23)
+✅ 旧单局 ui_* 脚本已删; ✅ 计时器开关(owner /api/room/timer + ui 按钮); ✅ 默认 AI 服务=deepseek(conf/deepseek.json, 本地 ollama 用 DIPLOMIND_CONFIG)。
+
+## 待打磨
+房主转让UI、踢人、断线提示;移动端;多局压测。
 
 ## 不做（避免范围蔓延）
 账号系统、公网部署、WebSocket 双向、大厅排行——超出 LAN 自用。

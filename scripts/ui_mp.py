@@ -1,4 +1,4 @@
-"""多人系统试玩: 房主建房(FR)→第二人凭码加入(DE)→房主开局→两人各发言→SSE互见→下令结算. 起服:8772 qwen2b."""
+"""多人系统试玩: 房主建房(FR)→第二人凭码加入(DE)→房主开局→两人各发言→SSE互见→下令结算. 起服:8772 (默认 deepseek; 本地: DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json)."""
 import re, time
 from playwright.sync_api import sync_playwright
 

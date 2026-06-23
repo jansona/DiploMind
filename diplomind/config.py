@@ -20,8 +20,11 @@ class Config:
     timeout: int = 120                            # per-call LLM timeout (s); slow calls give up -> hold
 
 
+DEFAULT_CONF = "conf/deepseek.json"              # default AI service = deepseek (was local ollama)
+
+
 def load() -> Config:
-    path = os.getenv("DIPLOMIND_CONFIG")         # DIPLOMIND_CONFIG=conf/glm.json uvicorn ...
+    path = os.getenv("DIPLOMIND_CONFIG") or DEFAULT_CONF   # DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json for local
     c = Config()
     if path and Path(path).exists():
         for k, v in json.loads(Path(path).read_text()).items():
