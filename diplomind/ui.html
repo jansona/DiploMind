@@ -31,7 +31,7 @@ rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked
 let m=await G('/api/menu');saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\'ld("'+s+'")\'>'+s+'</button>').join(' ')}
 function toSetup(){show('setup')}
 async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value,passcode:pw.value});save_t(d);enter()}
-async function join(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
+async function join(){L=await G('/api/i18n/'+lsel.value);let old=(JSON.parse(localStorage.dm||'{}')).TOK;let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value,token:old});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
 function jr(c){jc.value=c;toSetup()}
 async function ld(n){let d=await G('/api/load?name='+n,'POST');save_t(d);L=await G('/api/i18n/zh-Hans');enter()}
 async function start(){await G('/api/room/start','POST',{token:TOK})}

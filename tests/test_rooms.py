@@ -47,3 +47,9 @@ def test_passcode_gates_join():
     bad, why = m.join(r.code, "GERMANY", "Bo", None, passcode="0000"); assert bad is None and why == "badpass"
     ok, tok = m.join(r.code, "GERMANY", "Bo", None, passcode="1234"); assert ok is r and ok.seat_of(tok) == "GERMANY"
     miss, why = m.join("ZZZZ", None, "x", None); assert miss is None and why == "notfound"
+
+
+def test_returning_token_skips_passcode():
+    m = RoomManager(); r = m.create("t", "Al", "FRANCE", passcode="1234")
+    ok, tok = m.join(r.code, "GERMANY", "Bo", None, passcode="1234"); assert ok
+    again, _ = m.join(r.code, "GERMANY", "Bo", tok, passcode=""); assert again is r   # known token, no passcode needed
