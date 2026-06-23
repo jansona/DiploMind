@@ -17,4 +17,4 @@ def test_persona_config_fixed():
 
 def test_num_predict_cap():
     body = Gateway()._body([{"role": "system", "content": "x"}], Intent)
-    assert body["options"]["num_predict"] == 320       # 截输出压尾延迟
+    assert body["options"]["num_predict"] == 1024      # 够装 reasoning+多命令, 不截成 None
