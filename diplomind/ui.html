@@ -26,7 +26,7 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 <div id=game class=v>
 <div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
 <span style=flex:1></span><span id=oc class=v><button id=bstart onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>转让<select id=xfer onchange=doxfer()></select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
-<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button onclick=showres()>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
+<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button id=bres onclick=showres() style=display:none>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
 <div id=grid>
 <div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
 <div class=card id=ord style=display:none><b>下令</b> <span class=p id=ostat></span><div id=os style=max-height:200px;overflow:auto></div>已选: <span id=osel class=p></span></div>
@@ -79,7 +79,7 @@ bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp+' ('+(s.ms
 S(stg,(s.staged_msgs&&s.staged_msgs.length)?'📝本轮待投递('+s.staged_msgs.length+'/3,轮末统一送达): '+s.staged_msgs.join(' | '):'');
 let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;UNITS=s.units||0;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';S(ostat,'每单位选一条即自动结算')}
 if(s.phase!=mphase){mphase=s.phase;fetch('/api/map?token='+TOK).then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle?token='+TOK).then(d=>ch.textContent=d.text)}
-window._last=s;if(s.end||s.status=='ended'){result.className='';drawres(s);if(s.status=='ended'&&!s.end)res.textContent='对局已被房主结束'}}
+window._last=s;let over=s.end||s.status=='ended';bres.style.display=over?'':'none';if(over){result.className='';drawres(s);if(s.status=='ended'&&!s.end)res.textContent='对局已被房主结束'}}
 function ui(){bs.textContent=L.send||'发送';bk.textContent=L.skip||'跳过'}
 async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n+'&token='+TOK,'POST')}
 async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\n')+'\n\n地名:\n'+d.locs.join('\n')}
