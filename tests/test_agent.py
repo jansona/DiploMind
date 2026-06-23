@@ -46,3 +46,11 @@ def test_stab_cue_when_due():
     assert "GERMANY" in ag._stab_cue(eng) and "背刺" in ag._stab_cue(eng)   # 到点提示捅刀
     ag.mem.intent = {"target": "GERMANY", "move_turn": 1905}
     assert ag._stab_cue(eng) == ""                                          # 未到不提示
+
+
+def test_order_fuzzy_match():
+    from diplomind.personalities import PERSONAS
+    a = Agent("FRANCE", PERSONAS["bully"], gw=None)
+    flat = ["A PAR - BUR", "F BRE - MAO", "A MAR H"]
+    assert a._match(["A PAR-BUR", "f bre-mao", "A MAR H"], flat) == ["A PAR - BUR", "F BRE - MAO", "A MAR H"]  # near-miss recovered
+    assert a._match(["A PAR - XYZ"], flat) == []   # truly illegal stays dropped

@@ -1,11 +1,15 @@
 """AI agent — 5 async steps: perceive/attitude/intent/negotiate/order."""
 from __future__ import annotations
 
+import logging
+
 from .engine import OperationEngine
 from .gateway import Gateway
 from .memory import Memory
 from .personalities import Persona, system_prompt
 from .schemas import AttitudeUpdate, Intent, Message, OrderSet
+
+log = logging.getLogger("diplomind")
 
 
 class Agent:
@@ -34,10 +38,19 @@ class Agent:
         legal = eng.legal_orders(self.country)
         return sorted({o for v in legal.values() for o in v})
 
+    @staticmethod
+    def _norm(o: str) -> str:                                # canonicalize spacing/case for fuzzy legal match
+        return " ".join(str(o).upper().replace("-", " - ").split())
+
+    def _match(self, orders: list[str], flat: list[str]) -> list[str]:
+        canon = {self._norm(o): o for o in flat}             # near-miss (A PAR-BUR) -> legal (A PAR - BUR)
+        return [canon[self._norm(o)] for o in orders if self._norm(o) in canon]
+
     def _order_prompt(self, eng: OperationEngine, flat: list[str]) -> str:
         n = len(eng.legal_orders(self.country))
         return (self.perceive(eng) + f"\n意图:{self.mem.intent}\n你是 {self.country}，仅指挥自己 {n} 个单位。"
                 f"进攻多需配合: 主攻方向用 S 支援自己或盟友, 单兵硬冲常 bounce。"
+                f"扩张优先: 抢无主中心是涨中心最快的路, 别全 hold; 多数单位该移动占地, 仅必要才原地。"
                 f"从下列合法命令逐字复制，每单位恰好一条，共 {n} 条放入 orders 数组(只放命令字符串)：\n"
                 + "\n".join(flat) + f'\n示例:{{"orders":["{flat[0]}"],"reasoning":"一句话"}}')
 
@@ -81,7 +94,10 @@ class Agent:
         flat = self._legal_flat(eng)
         prompt = self._order_prompt(eng, flat) + self._stab_cue(eng)
         out = await self.gw.achat([self.sys, {"role": "user", "content": prompt}], OrderSet, tag=f"{self.country}:order", temp=0.2)
-        chosen = [o for o in (out.orders if out else []) if o in set(flat)]   # drop illegal = hold
+        raw = out.orders if out else []
+        chosen = self._match(raw, flat)                       # fuzzy match; illegal -> hold
+        if raw and not chosen:                                # all dropped = format mismatch, not a hold: flag it
+            log.warning("%s 下令%d条全不匹配->全hold, 例:%s", self.country, len(raw), raw[:2])
         yr = int("".join(filter(str.isdigit, eng.phase())) or 0)
         for o in chosen:
             self.mem.record_action(yr, self.country, o)
