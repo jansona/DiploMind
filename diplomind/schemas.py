@@ -2,7 +2,7 @@
 Lenient fields with defaults: small models emit null/missing; defaults avoid retries."""
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Intent(BaseModel):
@@ -83,3 +83,9 @@ class Message(BaseModel):
         if v is None or v == "":
             return []
         return [v] if isinstance(v, str) else [str(x) for x in v]
+
+    @model_validator(mode="after")
+    def _no_blackhole(self):                      # private w/o recipient would be visible to nobody
+        if self.type == "private" and not self.recipient:
+            self.type = "broadcast"
+        return self
