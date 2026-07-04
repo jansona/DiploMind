@@ -146,7 +146,7 @@ async def orders(r: OrdReq):
     if not room or room.status != "playing": return {"ok": False, "reason": "未在对局中"}
     room.short.discard(room.seat_of(r.token))
     res = await room.session.submit_orders(room.seat_of(r.token), r.orders)
-    if res.get("phase") and not res.get("build"):    # settled to a fresh phase: kick off next round (AI cognition+nego)
+    if res.get("phase") and not res.get("build") and not res.get("end"):   # fresh phase & game still on: next round
         spawn(room.session.begin_phase())
     _bump(room); return res
 
@@ -162,8 +162,9 @@ async def load(token: str | None = None, name: str = "auto"):
     except FileNotFoundError:
         raise HTTPException(404, f"存档不存在: {name}")
     room = RM.create(name, "Host", None, sess.lang); room.session = sess; room.status = "playing"
-    for p in sess.humans: room.seats[p] = {"name": p, "token": room.owner, "kind": "human"}
-    spawn(sess.begin_phase()); return {"code": room.code, "token": room.owner}
+    for i, p in enumerate(sess.humans):              # loader takes the primary seat; others reclaim by power on join
+        room.seats[p] = {"name": p, "token": room.owner if i == 0 else "", "kind": "human"}
+    spawn(sess.begin_phase()); return {"code": room.code, "token": room.owner, "seat": room.seat_of(room.owner)}
 
 @app.get("/api/chronicle")
 def chron(token: str | None = None):

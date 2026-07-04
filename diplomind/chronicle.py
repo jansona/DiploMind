@@ -6,9 +6,9 @@ from pydantic import BaseModel, Field
 from .bus import MessageBus
 
 
-def generate(bus: MessageBus, phase: str, centers: dict[str, int]) -> str:
-    """One segment per phase: public broadcasts + center counts."""
-    public = [m for m in bus.msgs if m.scope == "broadcast"]   # private excluded
+def generate(bus: MessageBus, phase: str, centers: dict[str, int], since: int = 0) -> str:
+    """One segment per phase: public broadcasts since last entry + center counts."""
+    public = [m for m in bus.msgs[since:] if m.scope == "broadcast"]   # private excluded; earlier msgs already chronicled
     lines = [f"=== {phase} ==="]
     for m in public:
         lines.append(f"{m.sender}公开宣称：{m.text}")

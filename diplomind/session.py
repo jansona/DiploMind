@@ -56,11 +56,12 @@ class Session:
                         for c in POWERS}
         self.ai = {c: p.agent for c, p in self.players.items() if isinstance(p, AIPlayer)}
         self.bus = MessageBus(); self.round = 1; self.mode = "NEGO"
-        self.chronicle: list[str] = []; self._opened: dict[str, set] = {}   # opener-only pre-opened tabs (recipient sees on first msg)
+        self.chronicle: list[str] = []; self._chron_idx = 0   # bus msgs already covered by past chronicle entries
+        self._opened: dict[str, set] = {}                 # opener-only pre-opened tabs (recipient sees on first msg)
         self.history: list[dict] = [{"phase": self.eng.phase(), **self.eng.centers()}]  # center counts per phase, for chart
         self._done: dict[str, object] = {}; self._hmsgs: dict = {}; self._committed: set[int] = set(); self._cog = False
         self._horders: dict[str, list[str]] = {}; self._settling = False   # per-human submitted orders; settle once
-        self._ai_task = None                               # AI orders drafted concurrently w/ humans during ORDERS
+        self._ai_task = None; self._ai_squad: list = []    # AI orders drafted concurrently w/ humans during ORDERS
 
     async def begin_phase(self) -> None:
         self._cog = False
@@ -72,6 +73,12 @@ class Session:
     def _end(self):
         return self.eng.check_end(self.max_year, draw_all=self.end_rule == "draw")
 
+    def ended(self) -> bool:                     # game decided: solo win / year-cap ruling
+        return bool(self._end())
+
+    def close(self) -> None:                     # release gateway httpx clients (room reaped)
+        self.gw.close()
+
     def aiify(self, power: str) -> bool:
         """Kick/abandon: a human seat becomes AI using its pre-assigned persona + blank memory."""
         if power not in self.humans:
@@ -80,9 +87,20 @@ class Session:
         agent = Agent(power, PERSONAS[self.persona_key[power]], self.gw, self.lang)
         self.players[power] = AIPlayer(agent); self.ai[power] = agent; self.persona_of[power] = agent.persona.name
         self._done.setdefault(power, None); self._horders.pop(power, None)   # unblock current round
-        try: asyncio.get_running_loop(); spawn(self._maybe_advance())        # AI takes over next round / settle
-        except RuntimeError: pass                                            # no loop (sync test): advance lazily
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:                                                 # no loop (sync test): advance lazily
+            return True
+        if self.mode == "NEGO":
+            spawn(self._maybe_advance())                                     # AI takes over next round
+        elif self.mode == "ORDERS" and all(p in self._horders for p in self.humans):
+            spawn(self._settle_continue())                                   # kicked seat was the last holdout
         return True
+
+    async def _settle_continue(self) -> None:            # settle + roll into next phase (same rule as web /api/orders)
+        res = await self.settle()
+        if res.get("phase") and not res.get("build") and not res.get("end"):
+            await self.begin_phase()
 
     def _start_round(self) -> None:
         self._done = {}; self._hmsgs = {}                # per-round submissions (human up to 3 msgs)
@@ -123,6 +141,8 @@ class Session:
         return self.mode == "NEGO" and power in self.humans and power not in self._done
 
     async def _maybe_advance(self) -> None:
+        if self.mode != "NEGO":                  # ORDERS/settling: a late aiify must not re-commit stale _done
+            return
         if self.pending() or self.round in self._committed:
             return
         self._committed.add(self.round)
@@ -136,7 +156,8 @@ class Session:
         if self.round > self.rounds or self.bus.round_silent(self.round - 1, ph):
             self.mode = "ORDERS"; self._horders = {}; log.info("转下令")
             if self.eng.phase_type() == "M":              # AI draft orders concurrently while humans pick
-                self._ai_task = spawn(asyncio.gather(*(p.decide(self.eng) for p in self.ai_players())))
+                self._ai_squad = self.ai_players()        # snapshot: a mid-phase aiify must not shift the zip below
+                self._ai_task = spawn(asyncio.gather(*(p.decide(self.eng) for p in self._ai_squad)))
             if not self.humans:                           # all-AI spectate: auto-settle + next phase
                 spawn(self._auto_spectate())
         else:
@@ -177,11 +198,11 @@ class Session:
             for p, o in self._horders.items():
                 self.eng.submit(p, o)                     # humans' submitted orders (already legal-filtered)
             if self.eng.phase_type() == "M":              # movement: AI orders drafted in parallel since ORDERS began
-                ai = self.ai_players()
+                ai = self._ai_squad if self._ai_task else self.ai_players()   # seats aiified after the draft just hold
                 outs = await (self._ai_task or asyncio.gather(*(p.decide(self.eng) for p in ai)))
                 for p, chosen in zip(ai, outs):
                     self.eng.submit(p.country, chosen)
-                self._ai_task = None
+                self._ai_task = None; self._ai_squad = []
             else:
                 self.eng.auto_resolve(except_=set(self.humans))   # retreat/build: AI auto, humans chose
             before = {c: set(self.eng.game.powers[c].centers) for c in POWERS}
@@ -193,12 +214,13 @@ class Session:
                 self.eng.auto_resolve(); nxt = self.eng.process()
             log.info("结算 -> %s", nxt)
             self.history.append({"phase": nxt, **self.eng.centers()})   # snapshot centers each phase for the chart
-            pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs if m.scope == "broadcast"]
+            pub = [f"{m.sender}: {m.text}" for m in self.bus.msgs[self._chron_idx:] if m.scope == "broadcast"]
             try:                                          # AI yearly summary (alliances/enmities/troops), same LLM
                 self.chronicle.append(await summarize_year(self.gw, nxt[:5], pub, self.eng.centers(), self.lang))
             except Exception as e:                        # LLM/parse fail -> local fallback, but log why
                 log.warning("年度总结失败, 回退本地: %s", e)
-                self.chronicle.append(generate(self.bus, nxt, self.eng.centers()))
+                self.chronicle.append(generate(self.bus, nxt, self.eng.centers(), since=self._chron_idx))
+            self._chron_idx = len(self.bus.msgs)          # this phase's msgs covered; next entry starts fresh
             self.round = 1; self.mode = "NEGO"; self._committed = set(); self._horders = {}   # keep bus: cross-phase chat history
             for a in self.ai.values(): a.mem.tick()
             return {"phase": nxt, "end": self._end()}
@@ -256,6 +278,7 @@ class Session:
         s.round = b.get("round", 1); s.mode = b.get("mode", "NEGO")
         for m in b.get("msgs", []):                      # restore chat history
             s.bus.post(m["rnd"], m["sender"], m["scope"], m["to"], m["text"], m.get("phase", ""))
+        s._chron_idx = len(s.bus.msgs)                   # restored chronicle already covers restored msgs
         for c, snap in (b.get("mem") or {}).items():     # restore AI memory (relations/actions/diary)
             if c in s.ai:
                 s.ai[c].mem.restore(snap)

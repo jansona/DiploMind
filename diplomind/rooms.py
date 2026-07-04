@@ -37,13 +37,20 @@ class Room:
         self.seen: dict[str, float] = {}          # power -> last client ping; stale = disconnected
 
     def claim(self, power: str, name: str, token: str) -> bool:
-        if self.status != "lobby" or power not in POWERS: return False
-        if power in self.seats and self.seats[power]["token"] != token: return False  # taken by other
+        if power not in POWERS or not token: return False
+        if self.status != "lobby":                # mid-game: only reclaim an unclaimed human seat (loaded save)
+            s = self.seats.get(power)
+            if not s or s["kind"] != "human" or s["token"] not in ("", token): return False
+        elif power in self.seats and self.seats[power]["token"] != token:
+            return False                          # lobby seat taken by another player
         self.seats[power] = {"name": name or power, "token": token, "kind": "human"}; self.active = time.time()
         return True
 
     def humans(self) -> list[str]:
         return sorted(p for p, s in self.seats.items() if s["kind"] == "human")
+
+    def finished(self) -> bool:                   # game decided (18 centers / year cap); room only shows the report
+        return bool(self.session and self.session.ended())
 
     def seat_of(self, token: str) -> str | None:
         return next((p for p, s in self.seats.items() if s["token"] == token), None)
@@ -109,8 +116,10 @@ class RoomManager:
     def list(self) -> list[dict]:
         return [r.summary() for r in self.rooms.values() if r.status != "ended"]
 
-    def gc(self, idle: int = 7200) -> None:                # reap ended, and abandoned lobbies only; never live games
+    def gc(self, idle: int = 7200) -> None:                # reap ended/decided + abandoned lobbies; never live games
         now = time.time()
-        dead = [c for c, r in self.rooms.items() if r.status == "ended" or (r.status == "lobby" and now - r.active > idle)]
+        dead = [c for c, r in self.rooms.items()
+                if r.status == "ended" or (now - r.active > idle and (r.status == "lobby" or r.finished()))]
         for c in dead:
-            del self.rooms[c]
+            r = self.rooms.pop(c)
+            if r.session: r.session.close()                # release gateway httpx clients

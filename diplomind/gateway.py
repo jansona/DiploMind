@@ -62,6 +62,13 @@ class Gateway:
         self._sem: asyncio.Semaphore | None = None      # concurrency cap: N at a time
         self._loop = None
 
+    def close(self) -> None:                        # session torn down: release both httpx clients
+        self.sync.close()
+        try:
+            asyncio.get_running_loop().create_task(self.aclient.aclose())
+        except RuntimeError:                        # no loop: nothing pending on the async client anyway
+            pass
+
     def _gate(self) -> asyncio.Semaphore:
         loop = asyncio.get_running_loop()
         if self._sem is None or self._loop is not loop:  # rebuild on new loop
