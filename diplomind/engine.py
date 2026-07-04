@@ -35,6 +35,7 @@ class OperationEngine:
         self.active_powers = list(active_powers) if active_powers else all_powers
         # inactive powers = neutral: hold (no orders), no negotiation; engine just gives them nothing
         self.dummy_powers = [p for p in all_powers if p not in self.active_powers]
+        self._possible: tuple[str, dict] | None = None   # (phase, all_possible_orders) — board only moves on process/load
 
     # --- state ---
     def phase(self) -> str:
@@ -51,8 +52,14 @@ class OperationEngine:
         return sorted(s for s in self.game.map.scs if s not in owned)   # supply centers nobody holds
 
     # --- legal orders: per orderable location -> list of legal orders ---
+    def _all_possible(self) -> dict:                 # cached per phase: SSE/state polls this many times a second
+        ph = self.game.get_current_phase()
+        if self._possible is None or self._possible[0] != ph:
+            self._possible = (ph, self.game.get_all_possible_orders())
+        return self._possible[1]
+
     def legal_orders(self, power: str) -> dict[str, list[str]]:
-        all_orders = self.game.get_all_possible_orders()
+        all_orders = self._all_possible()
         locs = self.game.get_orderable_locations(power)
         return {loc: all_orders.get(loc, []) for loc in locs}
 
@@ -113,3 +120,4 @@ class OperationEngine:
     def load(self, saved: dict) -> None:
         from diplomacy.utils.export import from_saved_game_format
         self.game = from_saved_game_format(saved)
+        self._possible = None                        # new board, same phase string possible: drop cache

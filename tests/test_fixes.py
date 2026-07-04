@@ -111,6 +111,18 @@ def test_gc_reaps_finished_and_closes_gateway():
     assert b.code not in m.rooms and gw.sync.is_closed   # decided + idle reaped, httpx released
 
 
+# --- perf: all_possible_orders cached per phase (SSE polls state constantly) ---
+def test_engine_possible_orders_cached_per_phase():
+    from diplomind.engine import OperationEngine
+    e = OperationEngine()
+    a = e._all_possible()
+    assert e._all_possible() is a                    # same phase: no recompute
+    e.auto_resolve(); e.process()
+    assert e._all_possible() is not a                # new phase: cache dropped
+    saved = e.save(); e.load(saved)
+    assert e.legal_orders("FRANCE")                  # load clears cache, still serves orders
+
+
 # --- fix: loaded multi-human save: seats reclaimable by power ---
 def test_claim_unclaimed_seat_midgame_only():
     m = RoomManager(); r = m.create("t", "Al", "FRANCE"); r.start()
