@@ -26,7 +26,6 @@ log = logging.getLogger("diplomind")
 logging.basicConfig(level=logging.DEBUG if os.getenv("DIPLOMIND_DEBUG") else logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")
 POWERS = ["AUSTRIA", "ENGLAND", "FRANCE", "GERMANY", "ITALY", "RUSSIA", "TURKEY"]
-MAX_ROUNDS = 3
 
 
 def spawn(coro):                                         # fire-and-forget but surface crashes, don't fail silently
@@ -286,7 +285,7 @@ class Session:
 
     def state(self, power=None) -> dict:
         power = power if power is not None else self.human
-        chans = self.bus.channels(power, self.round)        # spectate(power=None): privates auto-hidden, 群聊 visible
+        chans = self.bus.channels(power)                    # spectate(power=None): privates auto-hidden, 群聊 visible
         for k in self._opened.get(power, set()): chans.setdefault(k, [])   # opener-only empty tab; recipient gets it on first msg
         hmsgs = self._hmsgs.get(power, [])
         return {"human": power, "humans": self.humans, "phase": self.eng.phase(), "mode": self.mode, "round": self.round,

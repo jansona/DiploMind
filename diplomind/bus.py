@@ -27,7 +27,7 @@ class MessageBus:
     def round_silent(self, rnd: int, phase: str = "") -> bool:
         return not any(m.rnd == rnd and m.phase == phase for m in self.msgs)
 
-    def channels(self, power: str, upto_round: int) -> dict[str, list[str]]:
+    def channels(self, power: str) -> dict[str, list[str]]:
         """Group power-visible msgs by channel; full cross-phase history, labelled phase+round."""
         out: dict[str, list[str]] = {"群聊": []}
         for m in self.msgs:

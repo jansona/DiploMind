@@ -18,7 +18,7 @@ def test_channels_split():
     b.post(1, "FRANCE", "broadcast", [], "和平")
     b.post(2, "FRANCE", "private", ["ITALY"], "私局")
     b.post(2, "GERMANY", "private", ["RUSSIA"], "不该看到")
-    ch = b.channels("FRANCE", 2)
+    ch = b.channels("FRANCE")
     assert ch["群聊"] == ["R1 我(FRANCE): 和平"]
     assert ch["FRANCE·ITALY"] == ["R2 我(FRANCE): 私局"]   # 私聊各组合一频道
     assert "GERMANY·RUSSIA" not in ch                      # 无关私局不可见

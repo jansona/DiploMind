@@ -1,8 +1,7 @@
-"""Unified player abstraction: human/AI are peers, same flow and action interface (speak/order); only input differs.
-AI cognition (attitude/intent/memory) is private to AIPlayer."""
+"""Unified player abstraction: human/AI are peers in the round flow; only the input source differs.
+AIPlayer's input = LLM (attitude/intent are private cognition). HumanPlayer is a seat marker:
+its input arrives via the web API (session.say / session.submit_orders), not through this class."""
 from __future__ import annotations
-
-import asyncio
 
 from .agent import Agent
 from .engine import OperationEngine
@@ -31,20 +30,6 @@ class AIPlayer(Player):
 
 
 class HumanPlayer(Player):
-    """Input = frontend: act blocks on a future, resolved by web submit/skip."""
+    """Seat marker for a human power; session routes web input via _hmsgs/_horders."""
     def __init__(self, country: str) -> None:
         self.country = country
-        self._msg: asyncio.Future | None = None
-        self._orders: asyncio.Future | None = None
-
-    async def negotiate(self, eng, inbox):
-        self._msg = asyncio.get_running_loop().create_future()
-        return await self._msg
-    def submit_msg(self, m: Message | None):
-        if self._msg and not self._msg.done(): self._msg.set_result(m)
-
-    async def decide(self, eng):
-        self._orders = asyncio.get_running_loop().create_future()
-        return await self._orders
-    def submit_orders(self, o: list[str]):
-        if self._orders and not self._orders.done(): self._orders.set_result(o)
