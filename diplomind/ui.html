@@ -40,12 +40,13 @@ button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px 
 <script>
 let act='群聊',chans={},mphase='',keys='',legal='',L={},seen={},unread={},TOK='',CODE='',es=null;
 function S(el,v){if(el.textContent!=v)el.textContent=v}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
 function show(v){for(let x of ['menu','setup','game'])document.getElementById(x).className=x==v?'':'v'}
 function save_t(d){TOK=d.token;CODE=d.code;sessionStorage.dm=JSON.stringify({TOK,CODE,L})}
 async function toMenu(){if(es)es.close();show('menu');lobby()}
 async function lobby(){let r=await G('/api/rooms');rcount.textContent='('+r.rooms.length+')';
-rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked?'🔒':'')+x.name+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
+rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked?'🔒':'')+esc(x.name)+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
 let m=await G('/api/menu');saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\'ld("'+s+'")\'>'+s+'</button>').join(' ')}
 function toSetup(){show('setup')}
 async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value,passcode:pw.value,end_rule:endsel.value});save_t(d);enter()}
