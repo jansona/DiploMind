@@ -44,7 +44,7 @@ DIPLOMIND_CONFIG=conf/ollama_qwen35_2b.json uv run uvicorn diplomind.web:app  # 
 ```
 
 ## 二期 backlog
-多人房间/邀请✓;计时器开关✓;房主转让/踢人UI;断线提示;AI调味到"三局看不穿"实测;整局到胜负节奏;好玩杠杆UI(背叛弹原话/关系连线图/称号);移动端;CI;多局压测。
+多人房间/邀请✓;计时器开关✓;房主转让/踢人UI;断线提示;AI调味到"三局看不穿"实测;整局到胜负节奏;好玩杠杆UI(背叛弹原话/关系连线图/称号);移动端;CI;多局压测;承诺账本接线(memory.Commitment 现无写入方——谈判后 LLM 提取承诺入 ledger, 下令 prompt 注入未兑现承诺)。
 
 ## 文档
 [docs/archive/](docs/archive/)：PHASE1(一期归档,先读)、产品定义、技术架构、AI性格风格、RESULTS、DECISIONS、DEMO清单。docs/ 留正式文档。
