@@ -4,10 +4,27 @@
 
 [English](README.md) · [模型接入说明](docs/PROVIDERS.md) · [Blender 资源说明](docs/ASSETS.md)
 
+![Classic 棋盘、Blender 棋子与命令草稿](docs/screenshots/classic-table.png)
+
+*当前界面的真实 Chromium 截图：两个独立真人席位、五个离线模拟对手。截图展示交互，不代表真实 LLM 的策略水平。*
+
+<details>
+<summary>大厅与移动端</summary>
+
+![游戏大厅](docs/screenshots/lobby.png)
+
+<img src="docs/screenshots/mobile-orders.png" alt="移动端棋盘与命令面板" width="360">
+
+</details>
+
 ## 无费用本地体验
 
+需要 Python 3.11+ 与 [uv](https://docs.astral.sh/uv/)。当前重构位于 `dot/cloud-rebuild` 分支，默认分支未被覆盖。
+
 ```bash
-uv sync
+git clone --branch dot/cloud-rebuild https://github.com/jansona/DiploMind.git
+cd DiploMind
+uv sync --frozen
 DIPLOMIND_CONFIG=conf/mock.json uv run uvicorn diplomind.web:app --host 127.0.0.1 --port 8731
 ```
 
@@ -32,13 +49,14 @@ DIPLOMIND_CONFIG=conf/mock.json uv run uvicorn diplomind.web:app --host 127.0.0.
 - 房间私有存档保存待投递消息、已提交命令、AI 性格/记忆与原席位身份
 - API/Ollama 及实验性 Codex、Claude Code、Qoder 服务端 CLI 适配器
 - 不同原则与风险偏好的私有人格、按证据判断的信任、谈判承诺进入下令上下文
+- 有预算的上下文取舍；可选的一次战术复核 `order_preflight_review` 仅由服务端配置，默认关闭
 
 记忆、承诺和背叛判断是 Classic 的 AI 基础能力。不会把条约变成强制规则，也没有全知公开信誉分。
 **Plus 暂缓开发**，内部预留字段不代表完整第二套玩法。
 
 ## 安全与服务边界
 
-模型密钥只在服务端配置；网页不能输入任意命令或访问宿主机文件。支持明确授权的仓库外私有密钥文件引用，密钥不会进入存档或源码包。CLI 契约仍仅以模拟子进程测试，未执行真实已登录 CLI。API 已完成一次 1901 年有限真人席位＋真实 AI 对局，发现的策略与交互问题及修复边界见 [真实对局复盘](docs/REAL_GAME_REVIEW.zh-CN.md) 和 [接入说明](docs/PROVIDERS.md)。
+模型密钥只在服务端配置；网页不能输入任意命令或访问宿主机文件。支持明确授权的仓库外私有密钥文件引用，密钥不会进入存档或源码包。CLI 契约仍仅以模拟子进程测试，未执行真实已登录 CLI。OpenAI 兼容接入已通过 Aliyun/DeepSeek 的两次有界 1901 年混合席位真实对局及专项复测，但仍有非法命令、协同失误与盘面表述错误。详见 [真实复测](docs/REAL_REPLAY_REVIEW.zh-CN.md)、[战术复核](docs/TACTICAL_REVIEW.zh-CN.md) 和 [接入说明](docs/PROVIDERS.md)。CLI 运行在服务端，不是通往玩家电脑的任意命令桥接器。
 
 席位 token 是身份凭据。保留当前浏览器会话；只有昵称或国家名无法找回丢失的凭据。
 邀请仅分享房间码/邀请链接，不分享 token。读档保留原房间和席位并暂停，不会赋予陌生人房主身份。
@@ -56,6 +74,8 @@ node --test tests/test_frontend*.mjs
 # 先启动使用 mock 配置的服务
 uv run python scripts/e2e_mixed.py
 ```
+
+当前实现通过 539 项 Python 测试、21 项前端测试；九项浏览器验收与单独执行的原生浏览器就绪手势测试也已验证。截图使用新建模拟房间，不包含真实凭据或真人私聊。
 
 浏览器脚本使用两个独立的脚本控制真人客户端、五个模拟 AI 和一个观战客户端，验证谈判隐私、命令编辑、重连、提交等待/撤回、存读档、裁决及移动端布局。
 截图和结果保存至 `artifacts/e2e/`；浏览器可由 `CHROMIUM_EXECUTABLE` 指定。
