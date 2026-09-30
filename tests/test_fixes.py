@@ -43,10 +43,11 @@ async def _to_orders(s):
     assert s.mode == "ORDERS"
 
 
-# --- fix: private w/o recipient must not become a black hole ---
-def test_private_no_recipient_downgrades_to_broadcast():
-    m = Message(type="private", recipient=[], content="hello")
-    assert m.type == "broadcast"
+# --- privacy: malformed private messages must never become public ---
+def test_private_no_recipient_fails_closed():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Message(type="private", recipient=[], content="hello")
     m = Message(type="private", recipient=["FRANCE"], content="hello")
     assert m.type == "private"                       # real privates untouched
 
@@ -90,7 +91,8 @@ async def test_kick_during_orders_waits_other_humans():
 # --- fix: decided game must not start another negotiation round ---
 @pytest.mark.asyncio
 async def test_no_new_round_after_end():
-    s = _sess(["FRANCE"], max_year=1901)             # year-cap ruling hits after the first settle
+    s = _sess(["FRANCE"], max_year=1901)
+    s.eng.game.set_current_phase("F1901M")  # cap is after completing the named year
     await s.begin_phase(); await _to_orders(s)
     res = await s.submit_orders("FRANCE", [])         # last human in -> settle
     assert res.get("end") and s.state("FRANCE")["end"]           # decided; web gate skips begin_phase on end
@@ -104,7 +106,7 @@ def test_gc_reaps_finished_and_closes_gateway():
     m = RoomManager()
     a = m.create("live", "x", "FRANCE"); a.start(); a.active = 0
     b = m.create("done", "y", "FRANCE"); b.start(); b.active = 0
-    b.session.max_year = 1901                        # 1901 >= cap: ruling reached
+    b.session.max_year = 1900                        # the completed year is beyond the cap
     gw = b.session.gw
     m.gc()
     assert a.code in m.rooms                          # live game survives even when stale
@@ -127,7 +129,7 @@ def test_engine_possible_orders_cached_per_phase():
 def test_claim_unclaimed_seat_midgame_only():
     m = RoomManager(); r = m.create("t", "Al", "FRANCE"); r.start()
     r.seats["GERMANY"] = {"name": "GERMANY", "token": "", "kind": "human"}   # loaded, unclaimed
-    assert r.claim("GERMANY", "Bo", "tok2")                    # reclaim by power works mid-game
+    assert not r.claim("GERMANY", "Bo", "tok2")                # a country name is not a credential
     assert not r.claim("GERMANY", "Eve", "tok3")               # now taken
     assert not r.claim("ITALY", "Eve", "tok3")                 # AI seat not grabbable mid-game
     assert not r.claim("FRANCE", "Eve", "tok3")                # owner's live seat protected
@@ -139,14 +141,14 @@ def test_load_multihuman_rejoin(tmp_path, monkeypatch):
     monkeypatch.setattr(Session, "SAVES", tmp_path)
     with TestClient(app) as c:
         d = c.post("/api/room/create", json={"power": "FRANCE"}).json()
-        c.post("/api/room/join", json={"code": d["code"], "power": "GERMANY", "name": "Bo"})
+        bo = c.post("/api/room/join", json={"code": d["code"], "power": "GERMANY", "name": "Bo"}).json()
         c.post("/api/room/start", json={"token": d["token"]})
         c.post("/api/save", params={"name": "mh", "token": d["token"]})
-        nd = c.post("/api/load", params={"name": "mh"}).json()
+        nd = c.post("/api/load", params={"name": "mh", "token": d["token"]}).json()
         assert nd["seat"] == "FRANCE"                          # loader takes primary seat only
-        j = c.post("/api/room/join", json={"code": nd["code"], "power": "GERMANY", "name": "Bo"}).json()
+        j = c.post("/api/room/join", json={"code": nd["code"], "power": "GERMANY", "name": "Bo", "token": bo["token"]}).json()
         assert j["seat"] == "GERMANY"                          # second player reclaims own power
         s = c.get("/api/state", params={"token": j["token"]}).json()
         assert s["human"] == "GERMANY" and s["mode"] != "MENU"
-        e = c.post("/api/room/join", json={"code": nd["code"], "power": "GERMANY", "name": "Eve"}).json()
-        assert e["seat"] is None                               # claimed seat not stealable
+        e = c.post("/api/room/join", json={"code": nd["code"], "power": "GERMANY", "name": "Eve"})
+        assert e.status_code == 409                               # claimed seat not stealable

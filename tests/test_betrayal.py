@@ -1,4 +1,4 @@
-"""P0 背叛/记仇集成测: 盟友抢中心→记背叛+信任暴跌; 承诺到期失效。"""
+"""Capture facts must not fabricate betrayal intent or erase agreed handovers."""
 import asyncio
 
 from diplomind.schemas import Intent, Message, OrderSet, AttitudeUpdate
@@ -21,26 +21,28 @@ def _s():
     return s
 
 
-def test_ally_capture_marks_betrayal():
+def test_ally_capture_records_fact_without_universal_trust_penalty():
     s = _s()
     aus = s.ai["AUSTRIA"].mem; aus.apply_attitude({"ITALY": {"trust": 60, "attitude": "盟友"}})  # 信任意大利
     before = {c: set(s.eng.game.powers[c].centers) for c in POWERS}
     s.eng.game.set_centers("ITALY", "TRI"); s.eng.game.set_centers("AUSTRIA", [])  # 意大利夺奥地利中心
     s._detect_betrayal(before)
-    assert any(a.betray for a in aus.actions)            # 记为背叛
-    assert aus.relation("ITALY").trust == -80            # 记仇: 信任暴跌
+    assert any("TRI" in a.action and a.source == "public_result" for a in aus.actions)
+    assert not any(a.betray for a in aus.actions)
+    assert aus.relation("ITALY").trust == 60
 
 
-def test_human_capture_marks_betrayal():
-    """人类(非AI)夺AI盟友中心也应被记仇——核心约束。"""
+def test_human_capture_has_same_evidence_not_special_trust_penalty():
+    """Human and AI captors are assessed from the same evidence policy."""
     s = Session("ITALY", max_year=1903); s.gw = StubGW()   # ITALY = human, not in s.ai
     for a in s.ai.values(): a.gw = s.gw
     aus = s.ai["AUSTRIA"].mem; aus.apply_attitude({"ITALY": {"trust": 60, "attitude": "盟友"}})
     before = {c: set(s.eng.game.powers[c].centers) for c in POWERS}
     s.eng.game.set_centers("ITALY", "TRI"); s.eng.game.set_centers("AUSTRIA", [])
     s._detect_betrayal(before)
-    assert any(a.betray for a in aus.actions)
-    assert aus.relation("ITALY").trust == -80
+    assert any("TRI" in a.action and "not assessed" in a.action for a in aus.actions)
+    assert not any(a.betray for a in aus.actions)
+    assert aus.relation("ITALY").trust == 60
 
 
 def test_commitment_expiry():

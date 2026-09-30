@@ -5,6 +5,22 @@
 > 状态：二期多人模式落地(分支 main, 65测+playwright绿)。一期归档 docs/archive/PHASE1.md；多人方案 docs/PHASE2_MULTIPLAYER.md。
 > 多人=一服多局:房间码+昵称认领座位+seat-token续座, 房主开局/暂停/结束, AI补满7国, SSE推送, 谈判轮180s计时(仅人类)。rooms.py 注册, ui.html 前端。
 
+## Cloud rebuild (current)
+
+- Focus: Classic mixed human + AI games. Plus is deferred, not a completed ruleset
+- Default is zero-cost `mock`, explicitly a heuristic simulation rather than an LLM
+- `conf/mock.json` is the reproducible test config; real providers require explicit server-side setup
+- Frontend: `ui.html` shell + `static/app.js`, `board.js`, `rules.js`, `i18n.js`, `style.css`; Three.js is vendored locally
+- Map geometry: `board.py` derives all provinces/coasts/units from the actual diplomacy engine map
+- Blender: `assets/blender/`; shipped `/static/assets/{army,fleet,center,board-prop}.glb`
+- Private room checkpoints are scoped under `DIPLOMIND_DATA_DIR` (default logs), requiring retained bearer seat tokens
+- Run exactly one Uvicorn worker; no public deployment or authenticated model run is implied by tests
+- Tests: `uv run pytest -q`, `node --test tests/test_frontend_rules.mjs`, then mock server + `uv run python scripts/e2e_mixed.py`
+- Browser acceptance must cover two isolated human clients + AI and observer privacy, not only solo happy path
+- Classic AI traits, memory, promises, evidence provenance and betrayal thresholds are shared baseline intelligence; never add a public omniscient trust score
+- No default year cap; an explicitly configured cap is a house-rule draw after the full year. Unanimous draw voting remains deferred
+- Historical implementation notes below may describe the old monolithic interface/default provider; current code and README take precedence on those details
+
 ## 简介
 人执一国(可配)+6AI/混合/全AI观战。AI 各有隐藏性格，自然语言谈判/结盟/背刺，记仇兑现；难度=各国模型档位。人/AI 共用同一回合流程，仅输入源不同（前端 vs LLM）。
 

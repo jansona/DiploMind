@@ -1,5 +1,4 @@
-"""Web 前端 — 一服多局: 大厅建/进房, 房主开局/暂停/结束, seat-token 认领座位, AI 补满。
-2-7 真人轮次同步, SSE 推送, 谈判轮计时仅人类(超时落子)。地图 SVG。"""
+"""Authenticated multi-room API. Bearer seat secrets never enter public listings."""
 from __future__ import annotations
 
 import asyncio
@@ -7,174 +6,339 @@ import json
 import os
 import time
 from pathlib import Path
-
-DEBUG = bool(os.getenv("DIPLOMIND_DEBUG"))     # off: hide trust/internals; on: show
-
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse, StreamingResponse
-from pydantic import BaseModel
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
+from pydantic import BaseModel, ConfigDict, Field
 
 from .chronicle import book
 from .debugpanel import snapshot
 from .names import PROVINCES
 from .rooms import RoomManager, SHORT_SECS
 from .session import Session, spawn
+from .engine import OperationEngine
+from .config import load as load_config
+from .board import board_state
+from .security import install_access_log_redaction, private_api_headers
 
-
-@asynccontextmanager
-async def lifespan(app):
-    spawn(_ticker()); yield
-
-app = FastAPI(title="DiploMind", lifespan=lifespan)
+DEBUG = os.getenv("DIPLOMIND_DEBUG", "").lower() in {"1", "true", "yes"}
 RM = RoomManager()
 PRE = Path(__file__).parent.parent / "conf" / "presets"
 
 
+@asynccontextmanager
+async def lifespan(app):
+    ticker = asyncio.create_task(_ticker())
+    try:
+        yield
+    finally:
+        ticker.cancel()
+        await asyncio.gather(ticker, return_exceptions=True)
+        for room in list(RM.rooms.values()):
+            RM.checkpoint(room)
+            if room.session: await room.session.aclose()
+        RM.rooms.clear(); RM.tokens.clear()
+
+
+install_access_log_redaction()
+app = FastAPI(title="DiploMind", lifespan=lifespan)
+app.middleware("http")(private_api_headers)
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static", check_dir=False), name="static")
+
+
 def room_of(token: str | None):
-    return RM.rooms.get(RM.tokens.get(token or "", ""))
+    return RM.rooms.get(RM.tokens.get(token or "", "")) or (RM.recover(token) if token else None)
 
 
-@app.get("/api/menu")        # main menu: presets + saves; no auto game (start screen)
-def menu():
+def _room(token, *, owner=False, human=False, playing=False, session=False):
+    room = room_of(token)
+    if not room: raise HTTPException(401, "A valid room token is required")
+    if owner and token != room.owner: raise HTTPException(403, "Only the room owner can do that")
+    if human and room.seat_of(token) is None: raise HTTPException(403, "Claim a human seat to do that")
+    if session and not room.session: raise HTTPException(409, "The room has not started")
+    if playing and (room.status != "playing" or room.finished()): raise HTTPException(409, "The game is paused or ended")
+    return room
+
+
+def _result(result):
+    if result.get("ok") is False:
+        raise HTTPException(result.get("status", 409), result.get("reason", "Action unavailable"))
+    return result
+
+
+@app.get("/api/menu")
+async def menu(token: str | None = None):
     pres = {p.stem: json.loads(p.read_text()) for p in PRE.glob("*.json")} if PRE.exists() else {}
-    return {"presets": pres, "saves": Session.list_saves()}
+    return {"presets": pres, "saves": RM.list_saves(_room(token, owner=True)) if token else []}
 
 
-@app.get("/api/rooms")       # lobby: live rooms count + summaries
-def rooms():
+@app.get("/api/providers")
+async def providers():
+    from .gateway import provider_capabilities
+    cfg = load_config()
+    return {"selected": cfg.api, "model": cfg.model, "providers": provider_capabilities(cli_enabled=cfg.cli_enabled)}
+
+
+@app.get("/api/rooms")
+async def rooms():
     return {"rooms": RM.list()}
 
 
 class CreateReq(BaseModel):
-    name: str = ""; owner_name: str = "Host"; power: str | None = None; lang: str = "zh-Hans"; preset: str | None = None; passcode: str = ""; end_rule: str = ""
+    model_config = ConfigDict(extra="forbid")
+
+    name: str = Field(default="", max_length=80)
+    owner_name: str = Field(default="Host", max_length=40)
+    power: str | None = None
+    lang: str = "zh-Hans"
+    preset: str | None = None
+    passcode: str = Field(default="", max_length=128)
+    end_rule: str = ""
+    game_mode: Literal["classic", "plus"] = "classic"
+    max_year: int | None = Field(default=None, ge=1901, le=9999)
+
+
 class JoinReq(BaseModel):
-    code: str; power: str | None = None; name: str = ""; token: str | None = None; passcode: str = ""
+    code: str
+    power: str | None = None
+    name: str = Field(default="", max_length=40)
+    token: str | None = None
+    passcode: str = Field(default="", max_length=128)
+
+
 class TokReq(BaseModel):
     token: str | None = None
-class SayReq(BaseModel):
-    token: str | None = None; scope: str = "broadcast"; recipient: list[str] = []; content: str = ""; skip: bool = False
-class OrdReq(BaseModel):
-    token: str | None = None; orders: list[str] = []
-class PrivReq(BaseModel):
-    token: str | None = None; recipient: list[str] = []
+
+
+class PauseReq(TokReq):
+    status: Literal["paused", "playing"] | None = None
+
+
+class ActionReq(TokReq):
+    turn_id: str
+    request_id: str | None = Field(default=None, max_length=128)
+
+
+class SayReq(ActionReq):
+    scope: Literal["broadcast", "private"] = "broadcast"
+    recipient: list[str] = Field(default_factory=list, max_length=6)
+    content: str = Field(default="", max_length=4000)
+    skip: bool = False
+
+
+class OrdReq(ActionReq):
+    orders: list[str] = Field(default_factory=list, max_length=34)
+
+
+class PrivReq(TokReq):
+    recipient: list[str] = Field(default_factory=list, max_length=6)
+    turn_id: str | None = None
+
+
+class SecsReq(TokReq):
+    secs: int = Field(default=180, ge=0, le=3600)
+
+
+class XferReq(TokReq):
+    power: str = ""
+
+
+def _identity(room, token):
+    return {"code": room.code, "token": token, "seat": room.seat_of(token), "owner": token == room.owner}
 
 
 @app.post("/api/room/create")
-def create(r: CreateReq):
-    room = RM.create(r.name, r.owner_name, r.power, r.lang, r.passcode, r.end_rule)
-    return {"code": room.code, "token": room.owner, "seat": room.seat_of(room.owner), "owner": True}
+async def create(r: CreateReq):
+    try:
+        room = RM.create(r.name, r.owner_name, r.power, r.lang, r.passcode, r.end_rule, r.game_mode, r.max_year)
+    except ValueError as exc: raise HTTPException(422, str(exc))
+    return _identity(room, room.owner)
+
 
 @app.post("/api/room/join")
-def join(r: JoinReq):
+async def join(r: JoinReq):
+    if r.token and not room_of(r.token):
+        # An unknown supplied credential may join anew, but can never reclaim a live seat.
+        pass
     room, tok = RM.join(r.code, r.power, r.name, r.token, r.passcode)
-    if not room: raise HTTPException(403 if tok == "badpass" else 404, "口令错误" if tok == "badpass" else "房间不存在")
-    return {"code": room.code, "token": tok, "seat": room.seat_of(tok), "owner": tok == room.owner}
+    if not room:
+        statuses = {"badpass": 403, "notfound": 404, "invalidpower": 422, "seatunavailable": 409}
+        raise HTTPException(statuses.get(tok, 409), tok)
+    _bump(room)
+    return _identity(room, tok)
+
 
 @app.post("/api/room/start")
 async def start(r: TokReq):
-    room = room_of(r.token)
-    if not room or r.token != room.owner: raise HTTPException(403, "仅房主可开局")
-    room.start(); spawn(room.session.begin_phase()); _bump(room); return {"ok": True}
+    room = _room(r.token, owner=True)
+    try: room.start()
+    except ValueError as exc: raise HTTPException(409, str(exc))
+    RM._bind(room)
+    await room.session.begin_phase(); _bump(room)
+    return {"ok": True}
+
 
 @app.post("/api/room/pause")
-def pause(r: TokReq):
-    room = room_of(r.token)
-    if room and r.token == room.owner: room.status = "paused" if room.status == "playing" else "playing"; _bump(room)
-    return {"status": room.status if room else "?"}
+async def pause(r: PauseReq):
+    room = _room(r.token, owner=True, session=True)
+    if r.status == room.status and room.status in {"paused", "playing"}:
+        return {"status": room.status}
+    try: room.toggle_pause()
+    except ValueError as exc: raise HTTPException(409, str(exc))
+    if room.status == "playing":
+        await room.session.begin_phase()
+        await room.session._maybe_advance()
+    _bump(room)
+    return {"status": room.status}
+
 
 @app.post("/api/room/end")
-def end(r: TokReq):
-    room = room_of(r.token)
-    if room and r.token == room.owner: room.status = "ended"; _bump(room)
+async def end(r: TokReq):
+    room = _room(r.token, owner=True)
+    RM.end(room); _bump(room)
     return {"ok": True}
 
-class SecsReq(BaseModel):
-    token: str | None = None; secs: int = 180
-class XferReq(BaseModel):
-    token: str | None = None; power: str = ""
 
-@app.post("/api/room/secs")      # owner sets round clock seconds; 0 = no clock
-def secs(r: SecsReq):
-    room = room_of(r.token)
-    if room and r.token == room.owner: room.set_secs(r.secs); _bump(room)
-    return {"secs": room.secs, "timer_on": room.timer_on} if room else {}
+@app.post("/api/room/secs")
+async def secs(r: SecsReq):
+    room = _room(r.token, owner=True)
+    room.set_secs(r.secs); _bump(room)
+    return {"secs": room.secs, "timer_on": room.timer_on}
 
-@app.post("/api/room/transfer")  # owner hands ownership to another seated human
-def transfer(r: XferReq):
-    room = room_of(r.token)
-    if room and r.token == room.owner and room.transfer(r.power): _bump(room)
+
+@app.post("/api/room/transfer")
+async def transfer(r: XferReq):
+    room = _room(r.token, owner=True)
+    if not room.transfer(r.power): raise HTTPException(409, "Choose a seated human")
+    _bump(room)
     return {"ok": True}
 
-@app.post("/api/room/kick")      # owner kicks a human seat -> AI takes over (blank persona memory)
-def kick(r: XferReq):
-    room = room_of(r.token)
-    if room and r.token == room.owner: RM.kick(room.code, r.power); _bump(room)
+
+@app.post("/api/room/kick")
+async def kick(r: XferReq):
+    room = _room(r.token, owner=True)
+    if room.session and room.session._settling: raise HTTPException(409, "Wait for adjudication")
+    if not RM.kick(room.code, r.power): raise HTTPException(409, "That seat cannot be removed")
+    _bump(room)
     return {"ok": True}
+
+
+def _clock_state(room):
+    """Small time/presence payload; never includes messages or sealed orders."""
+    return {"secs_left": (max(0, int(room.deadline - time.time())) if room.deadline is not None else
+                          int(room.remaining) if room.remaining is not None else None),
+            "short": sorted(room.short), "dropped": room.dropped()}
+
+
+def _stream_revision(room):
+    s = room.session
+    # During adjudication callbacks deliberately skip checkpoints. These cheap
+    # fields still expose resolving/readiness and phase transitions immediately.
+    return (room.version, id(s), s.turn_id if s else None,
+            s._settling if s else False, tuple(s._ai_orders) if s else ())
+
+
+def _state(token: str | None = None):
+    if not token: return {"mode": "MENU", "phase": "-", "debug": False}
+    room = _room(token); seat = room.seat_of(token); room.touch(seat)
+    s = room.session.state(seat) if room.session else {"mode": "LOBBY", "phase": "-", "human": seat, "humans": room.humans()}
+    s.update({"debug": DEBUG and token == room.owner, "room": room.code, "rname": room.name,
+              "status": room.status, "owner": token == room.owner, "game_mode": room.game_mode,
+              **_clock_state(room), "timer_on": room.timer_on, "secs": room.secs,
+              "seats": room.humans(), "seat_names": {p: x["name"] for p, x in room.seats.items()}, "version": room.version})
+    return s
+
 
 @app.get("/api/state")
-def state(token: str | None = None):
-    room = room_of(token)
-    if not room or not room.session:
-        return {"mode": "MENU", "phase": "-", "debug": DEBUG}
-    seat = room.seat_of(token); room.touch(seat)             # client ping -> alive
-    s = room.session.state(seat); s["debug"] = DEBUG
-    s["room"] = room.code; s["rname"] = room.name; s["status"] = room.status; s["owner"] = token == room.owner
-    s["secs_left"] = max(0, int(room.deadline - time.time())) if room.deadline and room.timer_on else None
-    s["timer_on"] = room.timer_on; s["secs"] = room.secs
-    s["short"] = sorted(room.short); s["dropped"] = room.dropped()   # 30s-penalty / disconnected seats
-    s["seats"] = room.humans()
-    return s
+async def state(token: str | None = None):
+    return _state(token)
 
 @app.post("/api/say")
 async def say(r: SayReq):
-    room = room_of(r.token)
-    if not room or room.status != "playing": return {"ok": False, "reason": "未在对局中"}
-    room.short.discard(room.seat_of(r.token))            # responded -> off penalty
-    res = await room.session.say(room.seat_of(r.token), r.scope, r.recipient, r.content, r.skip); _bump(room)
-    return {**res, "state": state(r.token)}
+    room = _room(r.token, human=True, playing=True, session=True); seat = room.seat_of(r.token)
+    result = _result(await room.session.say(seat, r.scope, r.recipient, r.content, r.skip, r.turn_id, r.request_id))
+    room.short.discard(seat); _bump(room)
+    return {**result, "state": _state(r.token)}
+
 
 @app.post("/api/open")
-def open_private(r: PrivReq):
-    room = room_of(r.token)
-    return {"channel": room.session.open_private(room.seat_of(r.token), r.recipient) if room and room.session else ""}
+async def open_private(r: PrivReq):
+    room = _room(r.token, human=True, playing=True, session=True)
+    if r.turn_id and r.turn_id != room.session.turn_id: raise HTTPException(409, "This turn has changed")
+    try: channel = room.session.open_private(room.seat_of(r.token), r.recipient)
+    except ValueError as exc: raise HTTPException(422, str(exc))
+    _bump(room)
+    return {"channel": channel}
+
+
+async def _submit_orders(room, seat, orders, turn_id=None, request_id=None):
+    result = await room.session.submit_orders(seat, orders, turn_id, request_id)
+    if result.get("phase") and not result.get("build") and not result.get("end"):
+        await room.session.begin_phase()
+    _bump(room)
+    return result
+
 
 @app.post("/api/orders")
 async def orders(r: OrdReq):
-    room = room_of(r.token)
-    if not room or room.status != "playing": return {"ok": False, "reason": "未在对局中"}
-    room.short.discard(room.seat_of(r.token))
-    res = await room.session.submit_orders(room.seat_of(r.token), r.orders)
-    if res.get("phase") and not res.get("build") and not res.get("end"):   # fresh phase & game still on: next round
-        spawn(room.session.begin_phase())
-    _bump(room); return res
+    room = _room(r.token, human=True, playing=True, session=True); seat = room.seat_of(r.token)
+    result = _result(await _submit_orders(room, seat, r.orders, r.turn_id, r.request_id))
+    room.short.discard(seat)
+    return {**result, "state": _state(r.token)}
+
+
+@app.post("/api/orders/cancel")
+async def cancel_orders(r: ActionReq):
+    room = _room(r.token, human=True, playing=True, session=True)
+    result = _result(room.session.cancel_orders(room.seat_of(r.token), r.turn_id)); _bump(room)
+    return result
+
+
+@app.get("/api/saves")
+async def saves(token: str | None = None):
+    return {"saves": RM.list_saves(_room(token, owner=True))}
+
 
 @app.post("/api/save")
-def save(token: str | None = None, name: str = "auto"):
-    room = room_of(token)
-    return room.session.save(name) if room and room.session else {"ok": False}
+async def save(token: str | None = None, name: str = "auto"):
+    room = _room(token, owner=True, session=True)
+    try: return RM.save(room, name)
+    except ValueError as exc: raise HTTPException(409, str(exc))
 
-@app.post("/api/load")       # owner reopens a save: humans rejoin by seat (room code re-bound to saved seats)
+
+@app.post("/api/load")
 async def load(token: str | None = None, name: str = "auto"):
-    try:
-        sess = Session.load(name)
-    except FileNotFoundError:
-        raise HTTPException(404, f"存档不存在: {name}")
-    room = RM.create(name, "Host", None, sess.lang); room.session = sess; room.status = "playing"
-    for i, p in enumerate(sess.humans):              # loader takes the primary seat; others reclaim by power on join
-        room.seats[p] = {"name": p, "token": room.owner if i == 0 else "", "kind": "human"}
-    spawn(sess.begin_phase()); return {"code": room.code, "token": room.owner, "seat": room.seat_of(room.owner)}
+    room = _room(token, owner=True)
+    try: RM.load(room, name)
+    except FileNotFoundError: raise HTTPException(404, "No such save in this room")
+    except ValueError as exc: raise HTTPException(409, str(exc))
+    _bump(room)
+    return {**_identity(room, token), "status": room.status}
+
 
 @app.get("/api/chronicle")
-def chron(token: str | None = None):
-    room = room_of(token); return {"text": book(room.session.chronicle) if room and room.session else ""}
+async def chron(token: str | None = None):
+    room = _room(token, session=True)
+    return {"text": book(room.session.chronicle)}
+
 
 @app.get("/api/snapshot")
-def snap(token: str | None = None):
-    room = room_of(token)
-    if not room or not room.session or not DEBUG: return {}
-    g = room.session; return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
+async def snap(token: str | None = None):
+    room = _room(token, owner=True, session=True)
+    if not DEBUG: return {}
+    g = room.session
+    return {**snapshot(g.ai, g.bus, g.eng), "persona": g.persona_of, "lang": g.lang}
+
+
+@app.get("/api/board")
+async def board(token: str | None = None):
+    room = _room(token) if token else None
+    # Board snapshots contain JSON-native public data already; avoid FastAPI's
+    # recursive model encoder walking every SVG coordinate/path a second time.
+    return JSONResponse(board_state(room.session.eng if room and room.session else OperationEngine()))
 
 import re as _re
 from pathlib import Path as _P
@@ -184,10 +348,11 @@ for _p in _P(__import__("diplomacy").__file__).parent.glob("maps/svg/standard.sv
     _LABELS = _m.group(0) if _m else ""
 
 @app.get("/api/map", response_class=HTMLResponse)
-def gmap(token: str | None = None):
-    room = room_of(token)
-    if not room or not room.session: return "<svg/>"
-    svg = room.session.eng.game.render()
+async def gmap(token: str | None = None):
+    room = _room(token, session=True)
+    # Pending engine orders may already be staged while AI settlement is awaited.
+    # The public legacy SVG must never reveal them to other seats or observers.
+    svg = room.session.eng.game.render(incl_orders=False)
     return svg.replace("</svg>", _LABELS + "</svg>") if _LABELS else svg
 
 _I18N = _P(__file__).parent / "i18n"
@@ -202,41 +367,66 @@ def guide():
             "C": "Convoy 海运 F ENG C A LON-BRE", "B": "Build 造兵 A PAR B", "D": "Disband 拆兵"}
     return {"locs": [f"{a} = {en} / {zh}" for a, (en, zh) in sorted(PROVINCES.items())], "cmds": cmds}
 
-# --- SSE push: bump a version on change, stream state to clients (no 2s poll) ---
+# Server-sent updates use the exact room-token pair; revoked tokens terminate the stream.
 def _bump(room):
-    room.version = getattr(room, "version", 0) + 1; room.active = time.time()
+    room.version += 1; room.active = time.time(); RM.checkpoint(room)
+
 
 @app.get("/api/stream/{code}")
 async def stream(code: str, token: str | None = None):
+    room = _room(token)
+    if code.upper() != room.code: raise HTTPException(403, "Token belongs to another room")
     async def gen():
-        last = ""
-        for _ in range(7200):                            # ~1h cap; client reconnects
-            cur = json.dumps(state(token))               # also touches seat (heartbeat); push on any diff
-            if cur != last:
-                last = cur; yield f"data: {cur}\n\n"
-            await asyncio.sleep(0.5)
-    return StreamingResponse(gen(), media_type="text/event-stream")
+        last_revision = None
+        last_clock = None
+        for _ in range(7200):
+            if RM.tokens.get(token) != room.code or RM.rooms.get(room.code) is not room: return
+            # An open stream remains an active seat, even when no game data changes.
+            room.touch(room.seat_of(token))
+            revision = _stream_revision(room)
+            clock = _clock_state(room)
+            if revision != last_revision:
+                # Always rebuild through the authenticated seat filter. No full
+                # snapshot is shared across clients or retained after reconnect.
+                current = _state(token)
+                last_revision = revision
+                last_clock = clock
+                yield f"data: {json.dumps(current)}\n\n"
+            elif clock != last_clock:
+                last_clock = clock
+                payload = {**clock, "room": room.code, "version": room.version,
+                           "turn_id": room.session.turn_id if room.session else None}
+                yield f"event: clock\ndata: {json.dumps(payload)}\n\n"
+            else:
+                yield ": keepalive\n\n"
+            await asyncio.sleep(1)
+    return StreamingResponse(gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
-# --- timer ticker: humans-only round clock; timeout = skip/hold, then 30s penalty until response ---
+
 async def _ticker():
-    seen: dict[str, tuple] = {}; n = 0
+    n = 0
     while True:
         await asyncio.sleep(1); n += 1
-        if n % 60 == 0: RM.gc()                              # reap ended/idle rooms each minute
+        if n % 60 == 0: RM.gc()
         for room in list(RM.rooms.values()):
             s = room.session
-            if not s or room.status != "playing" or not room.timer_on or not room.humans():
-                room.deadline = None; continue
-            cur = (s.mode, s.round, s.eng.phase())
-            if seen.get(room.code) != cur:               # new round/phase -> reset clock
-                seen[room.code] = cur; pen = bool(room.short)
-                room.deadline = time.time() + (SHORT_SECS if pen else room.secs)
-            if room.deadline and time.time() >= room.deadline:
-                room.deadline = None
-                for p in room.humans():                  # whoever didn't act in time
-                    if s.mode == "NEGO" and s.your_turn(p): room.short.add(p); spawn(s.say(p, "broadcast", [], "", True))
-                    elif s.mode == "ORDERS" and p not in s._horders: room.short.add(p); spawn(s.submit_orders(p, []))
-                _bump(room)
+            if not s or room.status != "playing" or not room.timer_on or not room.humans() or s.ended(): continue
+            if s._settling: continue
+            if room.clock_turn != s.turn_id or room.deadline is None:
+                room.clock_turn = s.turn_id
+                room.deadline = time.time() + (SHORT_SECS if room.short else room.secs)
+            if time.time() < room.deadline: continue
+            room.deadline = None
+            turn = s.turn_id
+            for power in list(room.humans()):
+                if s.mode == "NEGO" and s.your_turn(power):
+                    room.short.add(power)
+                    s._spawn(s.say(power, "broadcast", [], "", True, turn))
+                elif s.mode == "ORDERS" and power not in s._horders:
+                    room.short.add(power)
+                    s._spawn(_submit_orders(room, power, [], turn))
+            _bump(room)
+
 
 @app.get("/", response_class=HTMLResponse)
 def index():

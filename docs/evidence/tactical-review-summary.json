@@ -1,0 +1,1258 @@
+{
+  "status": "completed",
+  "model": "deepseek-v4.1-flash",
+  "thinking": false,
+  "calls": 17,
+  "limits": {
+    "calls": 30,
+    "output_tokens_per_call": 2048,
+    "total_reserved_output_cap": 61440,
+    "wall_seconds": 900,
+    "retries": 0
+  },
+  "elapsed_seconds": 48.611,
+  "method": "12 current decisions with identical cached first-response pairs; 4 historical-order replay reviews + 2 no-review controls. One optional review each; no transport retries or foreign hidden orders. Hard30HTTP/2048output/900s.",
+  "usage": {
+    "prompt_tokens": 59203,
+    "completion_tokens": 2270,
+    "total_tokens": 61473,
+    "cached_tokens": 31488
+  },
+  "groups": {
+    "baseline": {
+      "calls": 12,
+      "service_ms_p50": 2923.3085,
+      "service_ms_max": 3734.867
+    },
+    "optimized": {
+      "calls": 1,
+      "service_ms_p50": 2419.084,
+      "service_ms_max": 2419.084
+    },
+    "seed_review": {
+      "calls": 4,
+      "service_ms_p50": 2899.9975,
+      "service_ms_max": 3526.812
+    }
+  },
+  "trials": [
+    {
+      "scenario": "invalid_mapping",
+      "repeat": 0,
+      "country": "AUSTRIA",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A SER - GRE",
+          "A VIE H",
+          "F TRI H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 1,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A SER - GRE",
+          "A VIE H",
+          "F TRI H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 1,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_opening",
+      "repeat": 1,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A LVP - WAL"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A LVP - WAL"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "italy_convoy",
+      "repeat": 0,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F ION C A APU - TUN",
+          "A APU - TUN VIA",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F ION C A APU - TUN",
+          "A APU - TUN VIA",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_opening",
+      "repeat": 0,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 1,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - NTH",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [
+          "own_destination_collision"
+        ],
+        "unacknowledged_warning_codes": [
+          "own_destination_collision"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "degraded",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": "own_destination_collision",
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [
+            "own_destination_collision"
+          ],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON S F EDI - NTH",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [],
+          "review_attempted": true,
+          "review_used": true,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "intentional_standoff",
+      "repeat": 1,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "invalid_mapping",
+      "repeat": 1,
+      "country": "AUSTRIA",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A SER - GRE",
+          "A VIE H",
+          "F TRI H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 1,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A SER - GRE",
+          "A VIE H",
+          "F TRI H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 1,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_after_bounce",
+      "repeat": 1,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NWG",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NWG",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "italy_convoy",
+      "repeat": 1,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F ION C A APU - TUN",
+          "A APU - TUN VIA",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F ION C A APU - TUN",
+          "A APU - TUN VIA",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "intentional_standoff",
+      "repeat": 0,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "foreign_convoy",
+      "repeat": 1,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A APU H",
+          "A VEN S A APU",
+          "F TYS - TUN"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A APU H",
+          "A VEN S A APU",
+          "F TYS - TUN"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "foreign_convoy",
+      "repeat": 0,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F TYS - TUN",
+          "A APU - NAP",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F TYS - TUN",
+          "A APU - NAP",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_after_bounce",
+      "repeat": 0,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "new_model",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NWG",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NWG",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_opening",
+      "repeat": 0,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 1,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "public_historical_orders",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - NTH",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [
+          "own_destination_collision"
+        ],
+        "unacknowledged_warning_codes": [
+          "own_destination_collision"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "degraded",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": "own_destination_collision",
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [
+            "own_destination_collision"
+          ],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [],
+          "review_attempted": true,
+          "review_used": true,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "england_opening",
+      "repeat": 1,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 1,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "public_historical_orders",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - NTH",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [
+          "own_destination_collision"
+        ],
+        "unacknowledged_warning_codes": [
+          "own_destination_collision"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "degraded",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": "own_destination_collision",
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [
+            "own_destination_collision"
+          ],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - ENG",
+          "A LVP - YOR"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 3,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [
+            "own_destination_collision"
+          ],
+          "final_errors": [],
+          "review_attempted": true,
+          "review_used": true,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "italy_convoy",
+      "repeat": 0,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 1,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "public_historical_orders",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A VEN H",
+          "F ION - TUN",
+          "A APU - GRE VIA"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "no_planned_convoy_path"
+        ],
+        "unacknowledged_warning_codes": [
+          "no_planned_convoy_path"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "degraded",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": "no_planned_convoy_path",
+          "initial_errors": [
+            "no_planned_convoy_path"
+          ],
+          "final_errors": [
+            "no_planned_convoy_path"
+          ],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A VEN H",
+          "F ION - TUN",
+          "A APU - NAP"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [
+            "no_planned_convoy_path"
+          ],
+          "final_errors": [],
+          "review_attempted": true,
+          "review_used": true,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "italy_convoy",
+      "repeat": 1,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 1,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "public_historical_orders",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A VEN H",
+          "F ION - TUN",
+          "A APU - GRE VIA"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "no_planned_convoy_path"
+        ],
+        "unacknowledged_warning_codes": [
+          "no_planned_convoy_path"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "degraded",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": "no_planned_convoy_path",
+          "initial_errors": [
+            "no_planned_convoy_path"
+          ],
+          "final_errors": [
+            "no_planned_convoy_path"
+          ],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A VEN H",
+          "F ION - TUN",
+          "A APU - NAP"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [
+            "no_planned_convoy_path"
+          ],
+          "final_errors": [],
+          "review_attempted": true,
+          "review_used": true,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "intentional_standoff",
+      "repeat": 0,
+      "country": "ENGLAND",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "synthetic_control",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "own_destination_collision"
+        ],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [
+          "NTH"
+        ],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "F EDI - NTH",
+          "F LON - NTH",
+          "A YOR H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "own_destination_collision"
+        ],
+        "unacknowledged_warning_codes": [],
+        "intentional_standoffs": [
+          "NTH"
+        ],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    },
+    {
+      "scenario": "foreign_convoy",
+      "repeat": 0,
+      "country": "ITALY",
+      "status": "completed",
+      "additional_http_calls": 0,
+      "initial_response_reused": true,
+      "initial_prompt_matched": true,
+      "initial_source": "synthetic_control",
+      "baseline": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A APU - GRE VIA",
+          "F TYS - TUN",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "convoy_requires_foreign_cooperation"
+        ],
+        "unacknowledged_warning_codes": [
+          "convoy_requires_foreign_cooperation"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      },
+      "review": {
+        "typed_output": true,
+        "chosen_orders": [
+          "A APU - GRE VIA",
+          "F TYS - TUN",
+          "A VEN H"
+        ],
+        "raw_order_count": 3,
+        "raw_resolved_count": 3,
+        "defaulted_units": [],
+        "all_explicit_holds": false,
+        "non_hold_orders": 2,
+        "warning_codes": [
+          "convoy_requires_foreign_cooperation"
+        ],
+        "unacknowledged_warning_codes": [
+          "convoy_requires_foreign_cooperation"
+        ],
+        "intentional_standoffs": [],
+        "decision_health": {
+          "status": "ready",
+          "plan_mismatches": 0,
+          "rejected_units": 0,
+          "last_error": null,
+          "initial_errors": [],
+          "final_errors": [],
+          "review_attempted": false,
+          "review_used": false,
+          "review_error": null
+        }
+      }
+    }
+  ]
+}

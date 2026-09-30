@@ -67,9 +67,13 @@ class OperationEngine:
     def submit(self, power: str, orders: list[str]) -> SubmitResult:
         legal = {o for opts in self.legal_orders(power).values() for o in opts}
         res = SubmitResult(power=power)
+        seen = set()
         for o in orders:
-            if o in legal:
-                res.accepted.append(o)
+            source = o.split()[1].split("/")[0] if len(o.split()) > 1 else o
+            if o in legal and source in seen:
+                res.rejected.append((o, "duplicate unit or build location"))
+            elif o in legal:
+                res.accepted.append(o); seen.add(source)
             else:
                 res.rejected.append((o, "not in legal_orders"))
         if res.rejected:                                  # illegal=hold, but log so it's debuggable
@@ -83,30 +87,76 @@ class OperationEngine:
         last = list(oh.values())[-1] if oh else {}
         return {p: list(v) for p, v in last.items() if v}
 
+    def last_adjudication(self) -> dict | None:
+        recent = self.recent_adjudications(limit=1)
+        return recent[-1] if recent else None
+
+    def recent_adjudications(self, limit: int = 6) -> list[dict]:
+        """Public, processed evidence only; never inspect the pending order buffer.
+
+        Orders describe attempts. Result flags and the resulting public positions
+        describe what actually happened (an empty flag list is not a location).
+        Dislodged units retain the engine's leading ``*`` marker in board states.
+        """
+        history = self.game.result_history
+        phases = list(history.keys())
+        current = self.game.get_state()
+        recent = []
+        for index in range(max(0, len(phases) - max(0, limit)), len(phases)):
+            phase = phases[index]
+            before = self.game.state_history.get(phase, {})
+            after = self.game.state_history[phases[index + 1]] if index + 1 < len(phases) else current
+            recent.append({"phase": str(phase), "source": "public_result",
+                           "orders": {p: list(orders) for p, orders in self.game.order_history.get(phase, {}).items()},
+                           "results": {unit: [str(flag) for flag in flags] for unit, flags in history[phase].items()},
+                           "units_before": {p: list(units) for p, units in before.get("units", {}).items()},
+                           "units_after": {p: list(units) for p, units in after["units"].items()}})
+        return recent
+
     def phase_type(self) -> str:
         return self.game.phase_type   # M=Movement R=Retreat A=Adjustment(build)
 
     def auto_resolve(self, except_=None) -> None:
-        """Fallback for retreat/build phases: each power takes the first legal order. except_ skips (humans chose)."""
+        """Deterministic legal fallback. All adjudication remains in diplomacy.Game."""
         skip = {except_} if isinstance(except_, str) else set(except_ or ())
-        for p in self.game.powers:
-            if p in skip:
-                continue
-            legal = self.legal_orders(p)
-            self.game.set_orders(p, [opts[0] for opts in legal.values() if opts])
+        for power in self.game.powers:
+            if power in skip: continue
+            legal = self.legal_orders(power); chosen = []; occupied = set()
+            if self.phase_type() == "A":
+                count = self.game.get_state()["builds"][power]["count"]
+                flat = sorted({order for opts in legal.values() for order in opts})
+                suffix = " B" if count > 0 else " D"
+                for order in flat:
+                    if not order.endswith(suffix): continue
+                    loc = order.split()[1].split("/")[0]
+                    if loc in occupied: continue
+                    if len(chosen) >= abs(count): break
+                    chosen.append(order); occupied.add(loc)
+            elif self.phase_type() == "R":
+                for loc, opts in sorted(legal.items()):
+                    retreats = [o for o in sorted(opts) if " R " in o and o.rsplit(" ", 1)[1].split("/")[0] not in occupied]
+                    if retreats:
+                        chosen.append(retreats[0]); occupied.add(retreats[0].rsplit(" ", 1)[1].split("/")[0])
+                    else:
+                        chosen.extend(sorted(o for o in opts if o.endswith(" D"))[:1])
+            else:
+                chosen = [o for opts in legal.values() for o in sorted(opts) if o.endswith(" H")]
+            self.game.set_orders(power, chosen)
 
-    def check_end(self, max_year: int = 1910, draw_all: bool = False) -> dict | None:
+    def check_end(self, max_year: int | None = None, draw_all: bool = True) -> dict | None:
         for p, n in self.centers().items():
             if n >= 18:                                   # 18 centers = solo win (both modes)
                 return {"winner": p, "centers": n}
         yr = int("".join(filter(str.isdigit, self.phase())) or 0)
-        if yr >= max_year:
+        if max_year is not None and yr > max_year:
             cen = self.centers()
             if draw_all:                                  # classic: all survivors draw, no ranking
-                return {"draw": True, "survivors": sorted(p for p, n in cen.items() if n > 0), "centers": cen}
-            top = max(cen.values())                       # tournament: most centers wins; tie -> co-leaders draw
+                return {"draw": True, "capped": True, "survivors": sorted(p for p, n in cen.items() if n > 0), "centers": cen}
+            top = max(cen.values())                       # optional Plus leaderboard: never a false solo victory
             leaders = sorted(p for p, n in cen.items() if n == top and n > 0)
-            return {"winner": leaders[0], "centers": top} if len(leaders) == 1 else {"draw": True, "survivors": leaders, "centers": cen}
+            return {"leader": leaders[0], "capped": True, "draw": True, "survivors": sorted(p for p, n in cen.items() if n > 0), "centers": cen} if len(leaders) == 1 else {"draw": True, "capped": True, "survivors": sorted(p for p, n in cen.items() if n > 0), "centers": cen}
+        if self.is_done():
+            return {"draw": True, "survivors": sorted(p for p, n in self.centers().items() if n > 0), "centers": self.centers()}
         return None
 
     def process(self) -> str:

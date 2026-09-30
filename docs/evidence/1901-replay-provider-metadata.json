@@ -1,0 +1,568 @@
+{
+  "telemetry_schema_version": 2,
+  "health_by_country": {
+    "AUSTRIA": {
+      "status": "degraded",
+      "calls": 10,
+      "successes": 8,
+      "failures": 2,
+      "fallbacks": 2,
+      "cancelled": 0,
+      "last_error": "illegal_orders"
+    },
+    "ENGLAND": {
+      "status": "degraded",
+      "calls": 10,
+      "successes": 9,
+      "failures": 1,
+      "fallbacks": 1,
+      "cancelled": 0,
+      "last_error": "illegal_orders"
+    },
+    "FRANCE": {
+      "status": "unverified",
+      "calls": 0,
+      "successes": 0,
+      "failures": 0,
+      "fallbacks": 0,
+      "cancelled": 0,
+      "last_error": null
+    },
+    "GERMANY": {
+      "status": "unverified",
+      "calls": 0,
+      "successes": 0,
+      "failures": 0,
+      "fallbacks": 0,
+      "cancelled": 0,
+      "last_error": null
+    },
+    "ITALY": {
+      "status": "ready",
+      "calls": 10,
+      "successes": 10,
+      "failures": 0,
+      "fallbacks": 0,
+      "cancelled": 0,
+      "last_error": null
+    },
+    "RUSSIA": {
+      "status": "ready",
+      "calls": 10,
+      "successes": 10,
+      "failures": 0,
+      "fallbacks": 0,
+      "cancelled": 0,
+      "last_error": null
+    },
+    "TURKEY": {
+      "status": "ready",
+      "calls": 10,
+      "successes": 10,
+      "failures": 0,
+      "fallbacks": 0,
+      "cancelled": 0,
+      "last_error": null
+    }
+  },
+  "state": "test_stopped",
+  "error": "timeout",
+  "ready": false,
+  "listening": false,
+  "host": "127.0.0.1",
+  "port": 8732,
+  "model": "deepseek-v4.1-flash",
+  "provider": "Aliyun",
+  "thinking_enabled": false,
+  "calls": 50,
+  "remaining_calls": 0,
+  "active_requests": 0,
+  "deadline_unix": 1790763976.188375,
+  "remaining_seconds": 0.0,
+  "usage": {
+    "prompt_tokens": 147867,
+    "completion_tokens": 6942,
+    "total_tokens": 154809
+  },
+  "usage_reported_calls": 50,
+  "limits": {
+    "calls": 50,
+    "output_tokens_per_call": 2048,
+    "total_max_output_tokens": 102400,
+    "wall_seconds": 600,
+    "concurrency": 2,
+    "retries": 0
+  },
+  "phases": [
+    {
+      "phase": "S1902M",
+      "mode": "NEGO",
+      "round": 1,
+      "humans": 2,
+      "ai": 5
+    }
+  ],
+  "call_reports": [
+    {
+      "call": 1,
+      "actor": "AUSTRIA",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 5059
+    },
+    {
+      "call": 2,
+      "actor": "ENGLAND",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 3810
+    },
+    {
+      "call": 3,
+      "actor": "ITALY",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7454
+    },
+    {
+      "call": 4,
+      "actor": "RUSSIA",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 8013
+    },
+    {
+      "call": 5,
+      "actor": "TURKEY",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 13277
+    },
+    {
+      "call": 6,
+      "actor": "ENGLAND",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6634
+    },
+    {
+      "call": 7,
+      "actor": "AUSTRIA",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7755
+    },
+    {
+      "call": 8,
+      "actor": "ITALY",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7967
+    },
+    {
+      "call": 9,
+      "actor": "RUSSIA",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7890
+    },
+    {
+      "call": 10,
+      "actor": "ENGLAND",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7607
+    },
+    {
+      "call": 11,
+      "actor": "AUSTRIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7043
+    },
+    {
+      "call": 12,
+      "actor": "TURKEY",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7235
+    },
+    {
+      "call": 13,
+      "actor": "ITALY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7155
+    },
+    {
+      "call": 14,
+      "actor": "RUSSIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7350
+    },
+    {
+      "call": 15,
+      "actor": "TURKEY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 5133
+    },
+    {
+      "call": 16,
+      "actor": "AUSTRIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 3506
+    },
+    {
+      "call": 17,
+      "actor": "ENGLAND",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 3564
+    },
+    {
+      "call": 18,
+      "actor": "ITALY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6214
+    },
+    {
+      "call": 19,
+      "actor": "RUSSIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 5804
+    },
+    {
+      "call": 20,
+      "actor": "TURKEY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 9784
+    },
+    {
+      "call": 21,
+      "actor": "AUSTRIA",
+      "step": "OrderSet",
+      "status": "failed",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 2,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 1,
+      "orders_default_hold_count": 1,
+      "error": "illegal_orders",
+      "fallback": "engine_order_filter",
+      "latency_ms": 3116
+    },
+    {
+      "call": 22,
+      "actor": "ENGLAND",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 3,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 3699
+    },
+    {
+      "call": 23,
+      "actor": "ITALY",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 3,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 6843
+    },
+    {
+      "call": 24,
+      "actor": "RUSSIA",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 4,
+      "orders_resolved_count": 4,
+      "orders_expected_count": 4,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 7407
+    },
+    {
+      "call": 25,
+      "actor": "TURKEY",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 3,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 9978
+    },
+    {
+      "call": 26,
+      "actor": "AUSTRIA",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 3644
+    },
+    {
+      "call": 27,
+      "actor": "ENGLAND",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 5213
+    },
+    {
+      "call": 28,
+      "actor": "ITALY",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7799
+    },
+    {
+      "call": 29,
+      "actor": "RUSSIA",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 8818
+    },
+    {
+      "call": 30,
+      "actor": "TURKEY",
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 11998
+    },
+    {
+      "call": 31,
+      "actor": "AUSTRIA",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7491
+    },
+    {
+      "call": 32,
+      "actor": "ENGLAND",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 8495
+    },
+    {
+      "call": 33,
+      "actor": "ITALY",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6606
+    },
+    {
+      "call": 34,
+      "actor": "RUSSIA",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7690
+    },
+    {
+      "call": 35,
+      "actor": "AUSTRIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6251
+    },
+    {
+      "call": 36,
+      "actor": "TURKEY",
+      "step": "Intent",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6762
+    },
+    {
+      "call": 37,
+      "actor": "ENGLAND",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6607
+    },
+    {
+      "call": 38,
+      "actor": "ITALY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6686
+    },
+    {
+      "call": 39,
+      "actor": "RUSSIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6250
+    },
+    {
+      "call": 40,
+      "actor": "TURKEY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 5610
+    },
+    {
+      "call": 41,
+      "actor": "AUSTRIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 4011
+    },
+    {
+      "call": 42,
+      "actor": "ENGLAND",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 4073
+    },
+    {
+      "call": 43,
+      "actor": "ITALY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 6671
+    },
+    {
+      "call": 44,
+      "actor": "RUSSIA",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 7007
+    },
+    {
+      "call": 45,
+      "actor": "TURKEY",
+      "step": "Message",
+      "status": "ok",
+      "http_status": 200,
+      "latency_ms": 9793
+    },
+    {
+      "call": 46,
+      "actor": "AUSTRIA",
+      "step": "OrderSet",
+      "status": "failed",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 2,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 1,
+      "orders_default_hold_count": 1,
+      "error": "illegal_orders",
+      "fallback": "engine_order_filter",
+      "latency_ms": 4512
+    },
+    {
+      "call": 47,
+      "actor": "ENGLAND",
+      "step": "OrderSet",
+      "status": "failed",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 2,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 1,
+      "orders_default_hold_count": 1,
+      "error": "illegal_orders",
+      "fallback": "engine_order_filter",
+      "latency_ms": 4733
+    },
+    {
+      "call": 48,
+      "actor": "ITALY",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 3,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 7973
+    },
+    {
+      "call": 49,
+      "actor": "RUSSIA",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 4,
+      "orders_resolved_count": 4,
+      "orders_expected_count": 4,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 8848
+    },
+    {
+      "call": 50,
+      "actor": "TURKEY",
+      "step": "OrderSet",
+      "status": "ok",
+      "http_status": 200,
+      "orders_submitted_count": 3,
+      "orders_resolved_count": 3,
+      "orders_expected_count": 3,
+      "orders_rejected_count": 0,
+      "orders_default_hold_count": 0,
+      "latency_ms": 10959
+    }
+  ],
+  "outcome": "TEST_STOP_ONLY_NOT_OFFICIAL_RESULT",
+  "max_year": 1901,
+  "chronicle": "local_only",
+  "retreat_build_ai": "engine_fallback",
+  "updated_at_unix": 1790763978.386
+}

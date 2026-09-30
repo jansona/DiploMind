@@ -17,4 +17,28 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync
-      - run: uv run pytest -q            # 71 unit/integration; StubGW = no LLM/network
+      - run: uv run pytest -q            # Offline; no credentials or model requests.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node --test tests/test_frontend*.mjs
+      - run: uv run playwright install --with-deps chromium
+      - name: Mixed multiplayer browser acceptance
+        env:
+          DIPLOMIND_CONFIG: conf/mock.json
+          DIPLOMIND_DATA_DIR: ${{ runner.temp }}/diplomind-e2e
+        run: |
+          uv run uvicorn diplomind.web:app --host 127.0.0.1 --port 8731 > /tmp/diplomind-server.log 2>&1 &
+          SERVER=$!
+          trap 'kill "$SERVER" 2>/dev/null || true' EXIT
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:8731/api/menu >/dev/null && break
+            sleep 1
+          done
+          uv run python scripts/e2e_mixed.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-acceptance
+          path: artifacts/e2e/
+          if-no-files-found: ignore

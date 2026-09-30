@@ -1,0 +1,76 @@
+{
+  "status": "PASS",
+  "validation": "Blender glTF importer round-trip",
+  "blender": "4.3.2",
+  "assets": {
+    "army": {
+      "status": "PASS",
+      "bytes": 153276,
+      "triangles": 3052,
+      "meshObjects": 1,
+      "gltfSizeXYZ": [
+        1.0,
+        0.55503,
+        1.0
+      ],
+      "materials": [
+        "Brass",
+        "Ink",
+        "Ivory",
+        "Nation"
+      ]
+    },
+    "fleet": {
+      "status": "PASS",
+      "bytes": 71220,
+      "triangles": 1280,
+      "meshObjects": 1,
+      "gltfSizeXYZ": [
+        0.43158,
+        0.49158,
+        1.0
+      ],
+      "materials": [
+        "Brass",
+        "Ink",
+        "Ivory",
+        "Nation"
+      ]
+    },
+    "center": {
+      "status": "PASS",
+      "bytes": 55760,
+      "triangles": 1004,
+      "meshObjects": 1,
+      "gltfSizeXYZ": [
+        0.87921,
+        0.46383,
+        1.0
+      ],
+      "materials": [
+        "Brass",
+        "Ink",
+        "Ivory",
+        "Nation"
+      ]
+    },
+    "board-prop": {
+      "status": "PASS",
+      "bytes": 88496,
+      "triangles": 1744,
+      "meshObjects": 1,
+      "gltfSizeXYZ": [
+        1.0,
+        0.1355,
+        1.0
+      ],
+      "materials": [
+        "Brass",
+        "Ink",
+        "Ivory",
+        "Nation"
+      ]
+    }
+  },
+  "combinedBytes": 368752
+}

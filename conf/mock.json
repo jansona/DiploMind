@@ -1,0 +1,13 @@
+{
+  "api": "mock",
+  "model": "diplomind-heuristic-v1",
+  "api_key": "",
+  "rounds": 3,
+  "lang": "zh-Hans",
+  "concurrency": 7,
+  "timeout": 20,
+  "human": "FRANCE",
+  "game_mode": "classic",
+  "max_year": null,
+  "cli_enabled": false
+}

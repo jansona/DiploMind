@@ -53,7 +53,9 @@ def test_save_load_continue():
         d = c.post("/api/room/create", json={"power": "FRANCE", "passcode": "p"}).json()
         c.post("/api/room/start", json={"token": d["token"]})
         c.post("/api/save", params={"name": "wtest", "token": d["token"]})
-        nd = c.post("/api/load", params={"name": "wtest"}).json()
+        assert c.post("/api/load", params={"name": "wtest"}).status_code == 401
+        nd = c.post("/api/load", params={"name": "wtest", "token": d["token"]}).json()
+        assert nd["code"] == d["code"] and nd["token"] == d["token"]
         s = c.get("/api/state", params={"token": nd["token"]}).json()
         assert s["human"] == "FRANCE" and s["mode"] != "MENU" and s["owner"]   # reopened, continues
 

@@ -1,0 +1,203 @@
+[
+  {
+    "name": "S1901M",
+    "orders": {
+      "AUSTRIA": [
+        "A BUD - SER",
+        "F TRI H"
+      ],
+      "ENGLAND": [
+        "F EDI - NTH",
+        "F LON - NTH",
+        "A LVP - YOR"
+      ],
+      "FRANCE": [
+        "A PAR - PIC",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "GERMANY": [
+        "A BER - KIE",
+        "A MUN - RUH",
+        "F KIE - DEN"
+      ],
+      "ITALY": [
+        "A VEN H",
+        "F NAP - ION",
+        "A ROM - APU"
+      ],
+      "RUSSIA": [
+        "F STP/SC - BOT",
+        "F SEV - RUM",
+        "A WAR H",
+        "A MOS H"
+      ],
+      "TURKEY": [
+        "F ANK - BLA",
+        "A CON - BUL",
+        "A SMY H"
+      ]
+    },
+    "results": {
+      "A BUD": [],
+      "A VIE": [],
+      "F TRI": [],
+      "F EDI": [
+        "bounce"
+      ],
+      "F LON": [
+        "bounce"
+      ],
+      "A LVP": [],
+      "F BRE": [],
+      "A MAR": [],
+      "A PAR": [],
+      "F KIE": [],
+      "A BER": [],
+      "A MUN": [],
+      "F NAP": [],
+      "A ROM": [],
+      "A VEN": [],
+      "A WAR": [],
+      "A MOS": [],
+      "F SEV": [],
+      "F STP/SC": [],
+      "F ANK": [],
+      "A CON": [],
+      "A SMY": []
+    }
+  },
+  {
+    "name": "F1901M",
+    "orders": {
+      "AUSTRIA": [
+        "A SER - GRE",
+        "A VIE - GAL"
+      ],
+      "ENGLAND": [
+        "F EDI - NTH",
+        "F LON - ENG"
+      ],
+      "FRANCE": [
+        "A PIC S A RUH - BEL",
+        "A SPA H",
+        "F MAO - POR"
+      ],
+      "GERMANY": [
+        "A RUH - BEL",
+        "A KIE - HOL",
+        "F DEN H"
+      ],
+      "ITALY": [
+        "A VEN H",
+        "F ION - TUN",
+        "A APU - GRE VIA"
+      ],
+      "RUSSIA": [
+        "F BOT - SWE",
+        "F RUM H",
+        "A WAR H",
+        "A MOS H"
+      ],
+      "TURKEY": [
+        "A BUL - CON",
+        "F BLA H",
+        "A SMY H"
+      ]
+    },
+    "results": {
+      "A VIE": [],
+      "F TRI": [],
+      "A SER": [],
+      "F EDI": [],
+      "F LON": [],
+      "A YOR": [],
+      "F MAO": [],
+      "A SPA": [],
+      "A PIC": [],
+      "F DEN": [],
+      "A KIE": [],
+      "A RUH": [],
+      "A VEN": [],
+      "F ION": [],
+      "A APU": [
+        "no convoy"
+      ],
+      "A WAR": [],
+      "A MOS": [],
+      "F RUM": [],
+      "F BOT": [],
+      "A SMY": [],
+      "F BLA": [],
+      "A BUL": []
+    }
+  },
+  {
+    "name": "W1901A",
+    "orders": {
+      "AUSTRIA": [
+        "A BUD B"
+      ],
+      "ENGLAND": [],
+      "FRANCE": [
+        "F BRE B",
+        "A MAR B"
+      ],
+      "GERMANY": [
+        "A BER B",
+        "A MUN B",
+        "F KIE B"
+      ],
+      "ITALY": [
+        "A NAP B"
+      ],
+      "RUSSIA": [
+        "A SEV B",
+        "A STP B"
+      ],
+      "TURKEY": []
+    },
+    "results": {
+      "A BUD": [
+        ""
+      ],
+      "F BRE": [
+        ""
+      ],
+      "A MAR": [
+        ""
+      ],
+      "A BER": [
+        ""
+      ],
+      "A MUN": [
+        ""
+      ],
+      "F KIE": [
+        ""
+      ],
+      "A NAP": [
+        ""
+      ],
+      "A SEV": [
+        ""
+      ],
+      "A STP": [
+        ""
+      ]
+    }
+  },
+  {
+    "name": "S1902M",
+    "orders": {
+      "AUSTRIA": null,
+      "ENGLAND": null,
+      "FRANCE": null,
+      "GERMANY": null,
+      "ITALY": null,
+      "RUSSIA": null,
+      "TURKEY": null
+    },
+    "results": {}
+  }
+]
