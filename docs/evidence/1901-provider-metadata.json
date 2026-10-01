@@ -1,0 +1,347 @@
+{
+  "state": "test_stopped",
+  "error": "timeout",
+  "ready": false,
+  "listening": false,
+  "host": "127.0.0.1",
+  "port": 8732,
+  "model": "deepseek-v4.1-flash",
+  "provider": "Aliyun",
+  "thinking_enabled": false,
+  "calls": 50,
+  "remaining_calls": 0,
+  "active_requests": 0,
+  "deadline_unix": 1790759242.518812,
+  "remaining_seconds": 0.0,
+  "usage": {
+    "prompt_tokens": 146788,
+    "completion_tokens": 8040,
+    "total_tokens": 154828
+  },
+  "usage_reported_calls": 50,
+  "limits": {
+    "calls": 50,
+    "output_tokens_per_call": 2048,
+    "total_max_output_tokens": 102400,
+    "wall_seconds": 600,
+    "concurrency": 2,
+    "retries": 0
+  },
+  "phases": [
+    {
+      "phase": "S1902M",
+      "mode": "NEGO",
+      "round": 1,
+      "humans": 2,
+      "ai": 5
+    }
+  ],
+  "call_reports": [
+    {
+      "call": 1,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 4894
+    },
+    {
+      "call": 2,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 4966
+    },
+    {
+      "call": 3,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 8846
+    },
+    {
+      "call": 4,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 9537
+    },
+    {
+      "call": 5,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 12513
+    },
+    {
+      "call": 6,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 6947
+    },
+    {
+      "call": 7,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 8972
+    },
+    {
+      "call": 8,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 6637
+    },
+    {
+      "call": 9,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 6887
+    },
+    {
+      "call": 10,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6275
+    },
+    {
+      "call": 11,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 6369
+    },
+    {
+      "call": 12,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 7675
+    },
+    {
+      "call": 13,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6140
+    },
+    {
+      "call": 14,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 7931
+    },
+    {
+      "call": 15,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6311
+    },
+    {
+      "call": 16,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 3636
+    },
+    {
+      "call": 17,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 3289
+    },
+    {
+      "call": 18,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6350
+    },
+    {
+      "call": 19,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6629
+    },
+    {
+      "call": 20,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 11387
+    },
+    {
+      "call": 21,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 5028
+    },
+    {
+      "call": 22,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 5845
+    },
+    {
+      "call": 23,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 9624
+    },
+    {
+      "call": 24,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 16987
+    },
+    {
+      "call": 25,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 14632
+    },
+    {
+      "call": 26,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 5164
+    },
+    {
+      "call": 27,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 4865
+    },
+    {
+      "call": 28,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 9606
+    },
+    {
+      "call": 29,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 8342
+    },
+    {
+      "call": 30,
+      "step": "AttitudeUpdate",
+      "status": "ok",
+      "latency_ms": 12050
+    },
+    {
+      "call": 31,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 7354
+    },
+    {
+      "call": 32,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 9610
+    },
+    {
+      "call": 33,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 6428
+    },
+    {
+      "call": 34,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 7275
+    },
+    {
+      "call": 35,
+      "step": "Intent",
+      "status": "ok",
+      "latency_ms": 5178
+    },
+    {
+      "call": 36,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 7359
+    },
+    {
+      "call": 37,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6442
+    },
+    {
+      "call": 38,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 7945
+    },
+    {
+      "call": 39,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 7550
+    },
+    {
+      "call": 40,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 8248
+    },
+    {
+      "call": 41,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6105
+    },
+    {
+      "call": 42,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 3830
+    },
+    {
+      "call": 43,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 6435
+    },
+    {
+      "call": 44,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 9787
+    },
+    {
+      "call": 45,
+      "step": "Message",
+      "status": "ok",
+      "latency_ms": 8747
+    },
+    {
+      "call": 46,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 5970
+    },
+    {
+      "call": 47,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 5267
+    },
+    {
+      "call": 48,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 15090
+    },
+    {
+      "call": 49,
+      "step": "OrderSet",
+      "status": "failed",
+      "error": "provider_error",
+      "latency_ms": 21687
+    },
+    {
+      "call": 50,
+      "step": "OrderSet",
+      "status": "ok",
+      "latency_ms": 19638
+    }
+  ],
+  "outcome": "TEST_STOP_ONLY_NOT_OFFICIAL_RESULT",
+  "max_year": 1901,
+  "chronicle": "local_only",
+  "retreat_build_ai": "engine_fallback",
+  "updated_at_unix": 1790759244.466
+}

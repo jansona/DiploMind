@@ -1,0 +1,386 @@
+{
+  "status": "completed",
+  "model": "deepseek-v4.1-flash",
+  "thinking": false,
+  "calls": 60,
+  "limits": {
+    "calls": 60,
+    "output_tokens_per_call": 2048,
+    "wall_seconds": 1200,
+    "retries": 0
+  },
+  "method": "Synthetic paired pipeline; fixed randomized order; two repeats only. Sequential calls have zero queue time. Cache tokens may be unavailable.",
+  "elapsed_seconds": 216.811,
+  "summary": {
+    "baseline": {
+      "calls": 30,
+      "ok": 30,
+      "stages": {
+        "AttitudeUpdate": {
+          "n": 10,
+          "service_p50_ms": 3945.344,
+          "service_p95_ms": 5375.983,
+          "prompt_tokens": 121902,
+          "completion_tokens": 1383,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 51840,
+          "cache_reported_calls": 10
+        },
+        "Message": {
+          "n": 10,
+          "service_p50_ms": 3613.0415000000003,
+          "service_p95_ms": 6763.962,
+          "prompt_tokens": 126551,
+          "completion_tokens": 841,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 107904,
+          "cache_reported_calls": 10
+        },
+        "OrderSet": {
+          "n": 10,
+          "service_p50_ms": 4089.7005,
+          "service_p95_ms": 5528.082,
+          "prompt_tokens": 129460,
+          "completion_tokens": 1003,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 93952,
+          "cache_reported_calls": 10
+        }
+      }
+    },
+    "optimized": {
+      "calls": 30,
+      "ok": 30,
+      "stages": {
+        "AttitudeUpdate": {
+          "n": 10,
+          "service_p50_ms": 3128.7815,
+          "service_p95_ms": 4646.933,
+          "prompt_tokens": 36572,
+          "completion_tokens": 1472,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 16256,
+          "cache_reported_calls": 10
+        },
+        "Message": {
+          "n": 10,
+          "service_p50_ms": 3093.105,
+          "service_p95_ms": 5008.24,
+          "prompt_tokens": 53023,
+          "completion_tokens": 889,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 17408,
+          "cache_reported_calls": 10
+        },
+        "OrderSet": {
+          "n": 10,
+          "service_p50_ms": 2872.5735,
+          "service_p95_ms": 4554.751,
+          "prompt_tokens": 56912,
+          "completion_tokens": 1171,
+          "usage_reported_calls": 10,
+          "cached_tokens_if_reported": 15488,
+          "cache_reported_calls": 10
+        }
+      }
+    }
+  },
+  "aggregate": {
+    "baseline": {
+      "calls": 30,
+      "input_tokens": 377913,
+      "output_tokens": 3227,
+      "cached_input_tokens": 253696,
+      "service_p50_ms": 3856.9735,
+      "service_p95_ms": 5528.082
+    },
+    "optimized": {
+      "calls": 30,
+      "input_tokens": 146507,
+      "output_tokens": 3532,
+      "cached_input_tokens": 49152,
+      "service_p50_ms": 3054.122,
+      "service_p95_ms": 4646.933
+    }
+  },
+  "trials": [
+    {
+      "repeat": 0,
+      "scenario": "friendly_bounce",
+      "variant": "baseline",
+      "country": "ENGLAND",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "F EDI - NTH",
+        "F LON - ENG",
+        "A YOR - WAL"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "friendly_bounce",
+      "variant": "optimized",
+      "country": "ENGLAND",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "F EDI - NTH",
+        "F LON S F EDI - NTH",
+        "A YOR - LON"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "buried_promise",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "buried_promise",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "false_capture_claim",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A MAR - SPA",
+        "A PAR - BUR",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "false_capture_claim",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A MAR - SPA",
+        "A PAR - BUR",
+        "F BRE - PIC"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "declined_condition",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "declined_condition",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "F BRE - MAO",
+        "A MAR - SPA"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "agreed_handover",
+      "variant": "baseline",
+      "country": "AUSTRIA",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A VIE - BOH",
+        "A BUD - SER"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 0,
+      "scenario": "agreed_handover",
+      "variant": "optimized",
+      "country": "AUSTRIA",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A VIE - GAL",
+        "A BUD - SER"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "friendly_bounce",
+      "variant": "baseline",
+      "country": "ENGLAND",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "F EDI - NTH",
+        "F LON - NTH",
+        "A YOR - WAL"
+      ],
+      "own_collisions": [
+        "NTH"
+      ]
+    },
+    {
+      "repeat": 1,
+      "scenario": "friendly_bounce",
+      "variant": "optimized",
+      "country": "ENGLAND",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "F EDI - NTH",
+        "F LON S F EDI - NTH",
+        "A YOR - LON"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "false_capture_claim",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "false_capture_claim",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A MAR - SPA",
+        "A PAR - BUR",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "buried_promise",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "buried_promise",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A MAR - SPA",
+        "A PAR - BUR",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "declined_condition",
+      "variant": "baseline",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - PIC",
+        "A MAR - BUR",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "declined_condition",
+      "variant": "optimized",
+      "country": "FRANCE",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A PAR - BUR",
+        "A MAR - SPA",
+        "F BRE - MAO"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "agreed_handover",
+      "variant": "optimized",
+      "country": "AUSTRIA",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A VIE - GAL",
+        "A BUD - SER"
+      ],
+      "own_collisions": []
+    },
+    {
+      "repeat": 1,
+      "scenario": "agreed_handover",
+      "variant": "baseline",
+      "country": "AUSTRIA",
+      "status": "completed",
+      "valid_raw_orders": true,
+      "chosen_orders": [
+        "A BUD - GAL",
+        "A VIE - TYR"
+      ],
+      "own_collisions": []
+    }
+  ]
+}

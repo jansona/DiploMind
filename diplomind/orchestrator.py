@@ -13,7 +13,9 @@ MAX_ROUNDS = 3
 
 
 class Orchestrator:
-    def __init__(self, eng: OperationEngine, agents: dict[str, Agent]) -> None:
+    def __init__(self, eng: OperationEngine, agents: dict[str, Agent], *, preflight_review: bool = False) -> None:
+        if type(preflight_review) is not bool: raise ValueError("preflight_review must be boolean")
+        self.preflight_review = preflight_review
         self.eng, self.agents, self.bus = eng, agents, MessageBus()
 
     async def negotiate(self) -> int:
@@ -30,7 +32,8 @@ class Orchestrator:
         return MAX_ROUNDS
 
     async def collect_and_process(self) -> dict:
-        results = await asyncio.gather(*(a.a_decide_orders(self.eng) for a in self.agents.values()))
+        options = {"preflight_review": True} if self.preflight_review else {}
+        results = await asyncio.gather(*(a.a_decide_orders(self.eng, **options) for a in self.agents.values()))
         report = {}
         for c, (out, chosen) in zip(self.agents, results):
             r = self.eng.submit(c, chosen)

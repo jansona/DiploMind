@@ -11,13 +11,15 @@ from .schemas import Message
 class Player:
     country: str
     async def negotiate(self, eng: OperationEngine, inbox: str) -> Message | None: ...
-    async def decide(self, eng: OperationEngine) -> list[str]: ...
+    async def decide(self, eng: OperationEngine, inbox: str | None = None) -> list[str]: ...
 
 
 class AIPlayer(Player):
     """Input = LLM; attitude/intent are private steps."""
-    def __init__(self, agent: Agent) -> None:
+    def __init__(self, agent: Agent, *, preflight_review: bool = False) -> None:
+        if type(preflight_review) is not bool: raise ValueError("preflight_review must be boolean")
         self.agent, self.country = agent, agent.country
+        self.preflight_review = preflight_review
 
     async def cognition(self, eng):
         await self.agent.a_update(eng); await self.agent.a_intent(eng)
@@ -25,8 +27,10 @@ class AIPlayer(Player):
     async def negotiate(self, eng, inbox):
         return await self.agent.a_negotiate(eng, inbox)
 
-    async def decide(self, eng):
-        _, chosen = await self.agent.a_decide_orders(eng); return chosen
+    async def decide(self, eng, inbox: str | None = None):
+        options = {"preflight_review": True} if self.preflight_review else {}
+        _, chosen = await self.agent.a_decide_orders(eng, inbox=inbox, **options)
+        return chosen
 
 
 class HumanPlayer(Player):

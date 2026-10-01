@@ -32,3 +32,11 @@ def test_human_config_no_persona():
 def test_province_names():
     from diplomind.names import PROVINCES, label
     assert PROVINCES["PAR"] == ("Paris", "巴黎") and "巴黎" in label("PAR")
+
+
+def test_provider_secrets_can_be_server_environment_only(monkeypatch):
+    monkeypatch.setenv("DIPLOMIND_API_KEY", "test-only-placeholder")
+    monkeypatch.setenv("DIPLOMIND_BASE_URL", "https://provider.invalid/v1")
+    cfg = load()
+    assert cfg.api_key == "test-only-placeholder"
+    assert cfg.base_url == "https://provider.invalid/v1"

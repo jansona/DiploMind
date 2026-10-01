@@ -26,5 +26,6 @@ def test_seven_powers_pipeline():
     orch = Orchestrator(eng, ags)
     res = asyncio.run(orch.run_game(max_phases=4))
     assert res["phases"] == 4
-    assert all(a.mem.relation("GERMANY").trust == -30 for a in ags.values())  # 记忆串通
+    assert all(a.mem.relation("GERMANY").trust == -30 for c, a in ags.items() if c != "GERMANY")
+    assert ags["GERMANY"].mem.relation("GERMANY").trust == 0  # trust is per opponent, not self-reputation
     assert all("country" in a.snapshot() for a in ags.values())

@@ -18,6 +18,19 @@ save.json
 conf/*
 !conf/example.json
 !conf/ollama.json
+!conf/mock.json
+!conf/aliyun.example.json
 !conf/presets/*.json
+
+# Reproducible local playtest output (not source assets)
+artifacts/
+.pytest_cache/
 !conf/presets/
 !conf/presets/*.json
+
+# Operator credentials never belong in source bundles.
+.env
+.env.*
+!.env.example
+*.pem
+*.key

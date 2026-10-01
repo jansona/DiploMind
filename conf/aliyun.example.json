@@ -1,0 +1,15 @@
+{
+  "api": "openai",
+  "base_url": "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+  "model": "deepseek-v4.1-flash",
+  "api_key": "",
+  "rounds": 1,
+  "lang": "zh-Hans",
+  "concurrency": 2,
+  "timeout": 120,
+  "game_mode": "classic",
+  "request_options": {
+    "enable_thinking": false,
+    "max_tokens": 2048
+  }
+}

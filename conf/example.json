@@ -1,6 +1,6 @@
 {
   "base_url": "https://open.bigmodel.cn/api/paas/v4",
-  "api_key": "YOUR_KEY",
+  "api_key": "",
   "model": "glm-4-flash",
   "api": "openai",
   "rounds": 5,

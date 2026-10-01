@@ -1,103 +1,595 @@
-<!doctype html><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>DiploMind</title>
-<style>
-:root{--bg:#f4f2ec;--pnl:#fff;--bd:#d8d2c4;--ink:#2b2620;--accent:#b5651d}
-body{font:13px/1.5 system-ui,monospace;margin:0;background:var(--bg);color:var(--ink)}
-#menu,#setup{max-width:760px;margin:1.5em auto;padding:1em}
-h1,h2,h3{font-weight:600;margin:.4em 0}.v{display:none}.p{color:var(--accent)}.r{color:#c00}
-button{font:13px system-ui;background:var(--accent);color:#fff;border:0;border-radius:5px;padding:5px 10px;cursor:pointer;margin:1px}
-button:hover{filter:brightness(1.1)}select,input{font:13px system-ui;border:1px solid var(--bd);border-radius:5px;padding:4px}
-#rooms button,#saves button{background:var(--pnl);color:var(--ink);border:1px solid var(--bd);display:block;width:100%;text-align:left;margin:3px 0}
-#bar{background:var(--ink);color:#fff;padding:6px 12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}#bar button{background:#5a5249}
-#grid{display:grid;grid-template-columns:1fr 320px;gap:10px;padding:10px;max-width:1100px;margin:auto}
-.card{background:var(--pnl);border:1px solid var(--bd);border-radius:8px;padding:8px}
-#map{overflow:hidden}#map svg{width:100%;height:auto;display:block}
-#log{white-space:pre-wrap;height:32vh;overflow:auto;font:12px monospace;background:#faf8f3;border-radius:5px;padding:6px}#ch{white-space:pre-wrap;font:12px monospace}
-#tabs button{font:12px;margin:1px;background:#eee;color:var(--ink)}#tabs .on{background:var(--accent);color:#fff}
-#npb{background:#fff;color:var(--accent);border:1px dashed var(--accent);font-size:11px}
-#c span{display:inline-block;padding:2px 6px;margin:2px;border-radius:4px;background:#eee}#t{width:70%}
-@media(max-width:700px){#grid{grid-template-columns:1fr}input,button,select{font-size:16px;min-height:36px}#t{width:80%}}
-</style>
-<div id=menu><h1>DiploMind</h1><button onclick=toSetup()>新游戏 New Game</button> <button onclick=lobby()>刷新房间</button>
-<h3>当前棋局 <span id=rcount></span></h3><div id=rooms></div><h3>继续存档</h3><div id=saves></div></div>
-<div id=setup class=v><h2>新游戏</h2>房名 <input id=rn size=20 placeholder=桌名> 昵称 <input id=nm size=12 value=Host>
-扮演 <select id=hsel><option>AUSTRIA<option>ENGLAND<option selected>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY<option value="">观战/Spectate</select>
-语言 <select id=lsel><option value=zh-Hans>简体中文<option value=en>English</select> 终局 <select id=endsel><option value=topcount>中心最多者胜<option value=draw>幸存即和</select> 口令(可空) <input id=pw size=8 placeholder=passcode>
-<button onclick=create()>建房 Create</button> <button onclick=toMenu()>返回</button>
-<h3>加入房间</h3>码 <input id=jc size=6> 昵称 <input id=jn size=12> 口令 <input id=jpw size=8> 国 <select id=jp><option value="">观战<option>AUSTRIA<option>ENGLAND<option>FRANCE<option>GERMANY<option>ITALY<option>RUSSIA<option>TURKEY</select><button onclick=join()>加入 Join</button></div>
-<div id=game class=v>
-<div id=bar>DiploMind <b id=rname></b> 房<b id=rc></b> · <b id=h></b> <b id=ph></b> <span id=md></span> 轮<span id=rd></span> <span class=r id=tm></span> <span class=r id=dc></span>
-<span style=flex:1></span><span id=oc class=v><button id=bstart onclick=start()>开局</button><button onclick=pause()>暂停</button>计时<select id=secsel onchange=setsecs()><option value=90>90s<option value=180 selected>180s<option value=300>300s<option value=0>不限</select>踢<select id=kick onchange=dokick()></select><button onclick=end()>结束</button></span>
-<button onclick=invite()>邀请</button><button onclick=save()>存档</button><button id=bres onclick=showres() style=display:none>战报</button><button onclick=toMenu()>菜单</button><button onclick=guide()>Guide</button></div>
-<div id=grid>
-<div><div class=card id=map></div><div class=card>中心 <span id=c></span> · 待发<span class=p id=pd></span></div>
-<div class=card id=ord style=display:none><b>下令</b> <span class=p id=ostat></span><div id=os style=max-height:200px;overflow:auto></div>已选: <span id=osel class=p></span><br><button onclick=sub()>下令并结算</button></div>
-<div class="card v" id=result><h3>最终结算</h3><div id=res></div><div id=chart></div></div></div>
-<aside><div class=card><b>聊天</b><div id=tabs></div><div id=pk style=font-size:11px;margin:3px 0></div><button id=npb onclick=newp()>＋ 私聊勾选国</button><div id=log></div>
-<div id=nego><input id=t placeholder=发言><button id=bs onclick=say(0)>发送</button><button id=bk onclick=say(1)>跳过</button><div class=p id=st></div><div id=stg class=p></div></div></div>
-<div class=card><b>编年史</b><div id=ch></div></div></aside></div>
-<pre id=gv style=display:none;font-size:11px;max-height:160px;overflow:auto;margin:8px></pre>
-<div id=inside class=v><button onclick=dbg()>看内脏</button><pre id=dbgv style=font-size:11px;max-height:160px;overflow:auto></pre></div></div>
-<script>
-let act='群聊',chans={},mphase='',keys='',legal='',L={},seen={},unread={},TOK='',CODE='',es=null;
-function S(el,v){if(el.textContent!=v)el.textContent=v}
-function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-async function G(u,m,b){return(await fetch(u,{method:m||'GET',headers:{'Content-Type':'application/json'},body:b&&JSON.stringify(b)})).json()}
-function show(v){for(let x of ['menu','setup','game'])document.getElementById(x).className=x==v?'':'v'}
-function save_t(d){TOK=d.token;CODE=d.code;sessionStorage.dm=JSON.stringify({TOK,CODE,L})}
-async function toMenu(){if(es)es.close();show('menu');lobby()}
-async function lobby(){let r=await G('/api/rooms');rcount.textContent='('+r.rooms.length+')';
-rooms.innerHTML=r.rooms.map(x=>'<button onclick=\'jr("'+x.code+'")\'>'+(x.locked?'🔒':'')+esc(x.name)+' ['+x.code+'] '+x.status+' '+x.phase+' 人'+x.humans+'/7</button>').join('')||'(无)';
-let m=await G('/api/menu');saves.innerHTML=(m.saves.length?m.saves:['(无)']).map(s=>'<button onclick=\'ld("'+s+'")\'>'+s+'</button>').join(' ')}
-function toSetup(){show('setup')}
-async function create(){L=await G('/api/i18n/'+lsel.value);let d=await G('/api/room/create','POST',{name:rn.value,owner_name:nm.value,power:hsel.value,lang:lsel.value,passcode:pw.value,end_rule:endsel.value});save_t(d);enter()}
-async function join(){L=await G('/api/i18n/'+lsel.value);let old=(JSON.parse(sessionStorage.dm||'{}')).TOK;let d=await G('/api/room/join','POST',{code:jc.value.toUpperCase(),power:jp.value,name:jn.value,passcode:jpw.value,token:old});if(!d.token){alert(d.detail||'加入失败');return}save_t(d);enter()}
-function jr(c){jc.value=c;toSetup()}
-async function ld(n){let d=await G('/api/load?name='+n,'POST');save_t(d);L=await G('/api/i18n/zh-Hans');enter()}
-async function start(){await G('/api/room/start','POST',{token:TOK})}
-async function pause(){await G('/api/room/pause','POST',{token:TOK})}
-async function setsecs(){await G('/api/room/secs','POST',{token:TOK,secs:+secsel.value})}
-async function doxfer(){let p=xfer.value;if(p&&confirm('转让房主给 '+p+'?'))await G('/api/room/transfer','POST',{token:TOK,power:p})}
-async function dokick(){let p=kick.value;if(p&&confirm('踢出 '+p+'? 该位转 AI 接管'))await G('/api/room/kick','POST',{token:TOK,power:p});kick.value=''}
-async function end(){if(confirm('结束本局?')){await G('/api/room/end','POST',{token:TOK});toMenu()}}
-function invite(){prompt('分享链接',location.origin+'/?join='+CODE)}
-function enter(){ui();show('game');act='群聊';keys='';legal='';pk.innerHTML='';if(es)es.close();es=new EventSource('/api/stream/'+CODE+'?token='+TOK);es.onmessage=e=>R(JSON.parse(e.data))}
-function pick(k){act=k;unread[k]=0;seen[k]=(chans[k]||[]).length;log.textContent=(chans[k]||[]).join('\n')||'(空)';[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==k?'on':'')}
-async function newp(){let to=[...pk.querySelectorAll(':checked')].map(c=>c.value);if(!to.length)return;let ch=(await G('/api/open','POST',{token:TOK,recipient:to})).channel;pk.querySelectorAll(':checked').forEach(c=>c.checked=false);keys='';pick(ch)}
-function R(s){if(s.mode=='MENU'){S(rc,CODE);oc.className='';bs.disabled=bk.disabled=t.disabled=true;S(st,'等房主开局');return}
-inside.className=s.debug?'':'v';S(ph,s.phase);S(rd,s.round);S(h,s.human||'观战');S(rname,s.rname||'');S(rc,s.room||CODE);oc.className=s.owner?'':'v';bstart.style.display=s.status=='lobby'?'':'none';
-S(tm,s.secs_left!=null?'⏱'+s.secs_left+'s':(s.status=='paused'?'⏸暂停':(s.timer_on?'':'计时关')));
-S(dc,((s.dropped&&s.dropped.length)?'⚠掉线:'+s.dropped.join(','):'')+((s.short&&s.short.length)?' ⏱短钟:'+s.short.join(','):''));
-if(s.owner){let oth=(s.seats||[]).filter(p=>p!=s.human);let ko='<option value=>踢出…</option>'+oth.map(p=>'<option>'+p+'</option>').join('');if(kick.innerHTML!=ko)kick.innerHTML=ko;secsel.value=s.timer_on?s.secs:0}
-S(c,Object.entries(s.centers||{}).map(([k,v])=>k+':'+v).join(' '));S(pd,(s.pending||[]).join(',')||'—');
-if(!pk.children.length)pk.innerHTML=Object.keys(s.centers||{}).filter(k=>k!=s.human).map(k=>'<label><input type=checkbox value='+k+'>'+k.slice(0,3)+'</label> ').join('');
-chans=s.channels||{};if(!chans[act])act='群聊';let nk=Object.keys(chans).join(',');
-for(let k in chans){let n=chans[k].length;if(k!=act&&seen[k]!=undefined&&n>seen[k])unread[k]=1;}
-if(nk!=keys){keys=nk;tabs.innerHTML=Object.keys(chans).map(k=>'<button onclick=\'pick("'+k+'")\'>'+k+'</button>').join('')}
-[...tabs.children].forEach(b=>{let k=b.textContent.replace(/ ✦/,'');b.textContent=k+(unread[k]?' ✦':'')});
-log.textContent=(chans[act]||[]).join('\n')||'(空)';seen[act]=(chans[act]||[]).length;[...tabs.children].forEach(b=>b.className=b.textContent.replace(' ✦','')==act?'on':'');
-nego.style.display=s.mode=='ORDERS'?'none':'';ord.style.display=s.mode=='ORDERS'?'':'none';
-S(md,s.mode=='ORDERS'?L.ord+': '+(s.order_pending||[]).join(','):s.mode);
-bs.disabled=bk.disabled=t.disabled=!s.your_turn;S(st,s.your_turn?L.sp+' ('+(s.msgs_left==undefined?3:s.msgs_left)+'条可发)':(s.staged&&s.staged!='已发0/3'?'⏳已发'+s.sent+'/3,等其他玩家':'⏳等待…'));
-S(stg,(s.staged_msgs&&s.staged_msgs.length)?'📝本轮待投递('+s.staged_msgs.length+'/3,轮末统一送达): '+s.staged_msgs.join(' | '):'');
-let nl=(s.legal||[]).join(',');if(nl!=legal){legal=nl;os.innerHTML=(s.legal||[]).map(o=>'<label><input type=checkbox value="'+o+'" onchange=oupd()> '+o+'</label><br>').join('');osel.textContent='';ostat.textContent='';ord.querySelector('button').disabled=false}
-if(s.phase!=mphase){mphase=s.phase;fetch('/api/map?token='+TOK).then(r=>r.text()).then(x=>map.innerHTML=x);G('/api/chronicle?token='+TOK).then(d=>ch.textContent=d.text)}
-window._last=s;let over=s.end||s.status=='ended';bres.style.display=over?'':'none';if(over){result.className='';drawres(s);if(s.status=='ended'&&!s.end)res.textContent='对局已被房主结束'}}
-function ui(){bs.textContent=L.send||'发送';bk.textContent=L.skip||'跳过'}
-async function save(){let n=prompt('存档名',new Date().toISOString().slice(0,16));if(n)await G('/api/save?name='+n+'&token='+TOK,'POST')}
-async function guide(){if(gv.style.display!='none'){gv.style.display='none';return}let d=await G('/api/guide');gv.style.display='';gv.textContent='命令:\n'+Object.entries(d.cmds).map(([k,v])=>k+' = '+v).join('\n')+'\n\n地名:\n'+d.locs.join('\n')}
-async function say(sk){if(t.disabled)return;if(sk&&!confirm('跳过本轮?'))return;if(!sk&&!t.value.trim()){st.textContent='⚠空';return}bs.disabled=bk.disabled=t.disabled=true;
-let H=h.textContent,scope=act=='群聊'?'broadcast':'private',to=act=='群聊'?[]:act.split('·').filter(x=>x!=H);
-let r=await G('/api/say','POST',{token:TOK,scope,recipient:to,content:t.value,skip:!!sk});if(r.ok)t.value='';R(r.state)}
-function oupd(){osel.textContent=[...os.querySelectorAll(':checked')].map(c=>c.value).join('; ')||'(无)'}
-async function sub(){let o=[...os.querySelectorAll(':checked')].map(x=>x.value);if(!o.length&&!confirm('未选命令, 全部原地?'))return;let b=event.target;b.disabled=true;os.querySelectorAll('input').forEach(c=>c.disabled=true);S(ostat,'⏳结算中…');await G('/api/orders','POST',{token:TOK,orders:o})}
-async function dbg(){if(dbgv.textContent){dbgv.textContent='';return}dbgv.textContent=JSON.stringify(await G('/api/snapshot?token='+TOK),null,1)}
-let COL={AUSTRIA:'#c00',ENGLAND:'#333',FRANCE:'#06c',GERMANY:'#777',ITALY:'#0a0',RUSSIA:'#c0c',TURKEY:'#c60'};
-function showres(){result.className=result.className?'':'v';if(!result.className)drawres(window._last||{})}
-function drawres(s){let e=s.end;res.innerHTML=e?(e.winner?'🏆 '+e.winner+' 单独获胜('+e.centers+'中心)':e.draw?'🤝 和局, 幸存: '+(e.survivors||[]).join(', '):''):'对局进行中…';
-let h=s.history||[];if(h.length<2){chart.innerHTML='';return}let P=Object.keys(COL),W=680,H=200,x=i=>30+i*(W-50)/(h.length-1),y=v=>H-20-v*(H-40)/18;
-let g='<svg width=100% viewBox="0 0 '+W+' '+H+'" style="border:1px solid #ccc"><line x1=30 y1='+y(0)+' x2='+W+' y2='+y(0)+' stroke=#ccc/><text x=2 y='+y(18)+' font-size=10>18</text>';
-g+=P.map(p=>'<polyline fill=none stroke="'+COL[p]+'" stroke-width=2 points="'+h.map((r,i)=>x(i)+','+y(r[p]||0)).join(' ')+'"/>'+'<text x='+(W-2)+' y='+y(h[h.length-1][p]||0)+' font-size=9 fill="'+COL[p]+'" text-anchor=end>'+p.slice(0,3)+'</text>').join('');
-chart.innerHTML=g+'</svg>'}
-async function resume(){try{let d=JSON.parse(sessionStorage.dm||'{}');if(d.TOK&&(await G('/api/state?token='+d.TOK)).mode!='MENU'){TOK=d.TOK;CODE=d.CODE;L=d.L||{};enter();return true}}catch(e){}return false}
-let q=new URLSearchParams(location.search).get('join');if(q){jc.value=q;toSetup()}else resume().then(ok=>ok||toMenu())
-</script>
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#122d39" />
+    <meta
+      name="description"
+      content="Seven powers. One continent. Every promise has a price. A modern Diplomacy strategy table."
+    />
+    <title>DiploMind — The diplomatic table</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23122d39'/%3E%3Cpath d='M19 15h14c23 0 23 34 0 34H19V15zm8 7v20h6c13 0 13-20 0-20z' fill='%23e9cc8c'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/static/vendor/three.module.min.js",
+          "three/addons/": "/static/vendor/addons/"
+        }
+      }
+    </script>
+    <script type="module" src="/static/app.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to main content</a>
+    <div
+      id="toast-region"
+      class="toast-region"
+      role="status"
+      aria-live="polite"
+    ></div>
+    <header class="site-header">
+      <a id="brand-link" class="brand" href="/" aria-label="DiploMind home"
+        ><span class="brand-mark">D<span>✦</span></span
+        ><span>DiploMind<small>THE DIPLOMATIC TABLE</small></span></a
+      >
+      <div id="header-context" class="header-context">
+        <span class="status-dot"></span> A game of words. A world of
+        consequences.
+      </div>
+      <div class="header-actions">
+        <button
+          id="locale-button"
+          class="text-button"
+          aria-label="Switch interface language"
+        >
+          中文
+        </button>
+        <button class="text-button" id="help-button">
+          <span class="icon">?</span> How to play</button
+        ><button
+          class="icon-button"
+          id="sound-button"
+          aria-label="Enable turn alerts"
+          title="Turn alerts off"
+        >
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.5"
+          >
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
+            <path d="M9 20a3 3 0 0 0 6 0" />
+          </svg></button
+        ><button class="avatar" title="Your local session">YOU</button>
+      </div>
+    </header>
+    <main id="main">
+      <section id="home-view" class="home-view">
+        <div class="home-copy">
+          <p class="eyebrow"><span></span> EUROPE, 1901 · YOUR NEXT MOVE</p>
+          <h1>History is written<br />between the lines.</h1>
+          <p class="intro">
+            Seven powers. One continent. Allies with agendas.<br />Take your
+            seat at the table and make every promise count.
+          </p>
+          <div class="hero-actions">
+            <button class="button primary" id="new-game-button">
+              Take your seat <span>→</span></button
+            ><button class="button secondary" id="join-game-button">
+              Join a table
+            </button>
+          </div>
+          <div id="home-provider" class="provider-note"></div>
+          <div class="hero-footnote">
+            <span class="tiny-seal">✦</span
+            ><span
+              >Classic Diplomacy. Human ambition.<br /><strong
+                >A new kind of opponent.</strong
+              ></span
+            >
+          </div>
+        </div>
+        <div class="hero-board">
+          <div class="hero-board-title">
+            <span class="eyebrow">THE EUROPEAN THEATRE</span
+            ><span class="pill">7 POWERS · 34 CENTERS</span>
+          </div>
+          <div id="home-board-slot" class="home-board-slot">
+            <div id="board-host" class="board-host">
+              <div class="board-loading">
+                <span class="spinner"></span>Setting the table…
+              </div>
+            </div>
+          </div>
+          <div class="hero-caption">
+            <span><i></i> A living strategy table</span
+            ><span>18 supply centers to victory</span>
+          </div>
+        </div>
+        <section class="tables-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">MAKE YOUR NEXT ALLIANCE</p>
+              <h2>Open tables</h2>
+            </div>
+            <button id="refresh-rooms" class="text-button">↻ Refresh</button>
+          </div>
+          <div id="rooms-list" class="rooms-list" aria-live="polite"></div>
+          <div id="resume-session" class="resume-session" hidden>
+            <div>
+              <strong>Your seat is waiting</strong>
+              <p>Return to this browser’s current table.</p>
+            </div>
+            <button class="button secondary" id="resume-button">
+              Return to table →
+            </button>
+          </div>
+        </section>
+        <footer class="home-footer">
+          <span>DIPLOMIND / AN OPEN-SOURCE STRATEGY EXPERIENCE</span
+          ><span>Trust is a strategy. So is doubt.</span>
+        </footer>
+      </section>
+      <section id="game-view" class="game-view" hidden>
+        <nav class="rail" aria-label="Game views">
+          <button
+            class="rail-button active"
+            id="table-tab"
+            title="Strategy table"
+            aria-label="Strategy table"
+          >
+            ◈<span>Table</span></button
+          ><button
+            class="rail-button"
+            id="chronicle-button"
+            title="Chronicle"
+            aria-label="Open chronicle"
+          >
+            ▤<span>History</span></button
+          ><button
+            class="rail-button"
+            id="room-button"
+            title="Room settings"
+            aria-label="Open room settings"
+          >
+            ♧<span>Room</span>
+          </button>
+          <div class="rail-spacer"></div>
+          <button
+            class="rail-button"
+            id="home-button"
+            title="Back to tables"
+            aria-label="Back to tables"
+          >
+            ⌂<span>Tables</span>
+          </button>
+        </nav>
+        <div class="game-main">
+          <header class="phase-header">
+            <div>
+              <p class="eyebrow" id="room-label">PRIVATE TABLE</p>
+              <h1 id="phase-title">Spring 1901</h1>
+              <p id="phase-subtitle">The opening moves of a new world</p>
+            </div>
+            <div class="phase-actions">
+              <span id="provider-status" class="provider-chip"></span>
+              <span id="mode-pill" class="pill">CLASSIC</span
+              ><span id="connection-status" class="connection-status"
+                ><i></i>Live</span
+              ><button id="invite-button" class="button secondary compact">
+                Invite <span>→</span>
+              </button>
+            </div>
+          </header>
+          <div id="game-notice" class="game-notice" hidden role="status"></div>
+          <div class="phase-track" aria-label="Turn progress">
+            <div data-stage="NEGO"><span>01</span> Negotiation</div>
+            <i></i>
+            <div data-stage="ORDERS"><span>02</span> Write orders</div>
+            <i></i>
+            <div data-stage="RESOLVING"><span>03</span> Resolution</div>
+            <span id="round-clock" class="round-clock">No time limit</span>
+          </div>
+          <section class="table-panel" aria-label="Interactive map of Europe">
+            <div class="map-topline">
+              <div>
+                <span class="eyebrow">EUROPEAN THEATRE</span
+                ><span id="map-status">Select a piece to plan your move</span>
+              </div>
+              <div class="map-controls">
+                <button
+                  id="view-3d"
+                  class="seg-button active"
+                  aria-pressed="true"
+                >
+                  3D</button
+                ><button id="view-2d" class="seg-button" aria-pressed="false">
+                  2D</button
+                ><span class="control-divider"></span
+                ><button
+                  id="zoom-out"
+                  class="icon-button"
+                  aria-label="Zoom out"
+                >
+                  −</button
+                ><button id="zoom-in" class="icon-button" aria-label="Zoom in">
+                  +</button
+                ><button
+                  id="reset-view"
+                  class="icon-button"
+                  aria-label="Reset map view"
+                >
+                  ⌖
+                </button>
+              </div>
+            </div>
+            <div id="game-board-slot" class="game-board-slot"></div>
+            <div class="map-bottomline">
+              <span
+                ><span class="legend-dot"></span> Supply center
+                <span class="legend-piece">▲</span> Army
+                <span class="legend-piece">▰</span> Fleet</span
+              ><span id="map-help"
+                >Drag to pan · Scroll to zoom · Right-drag to orbit</span
+              >
+            </div>
+            <div id="province-tooltip" class="province-tooltip" hidden></div>
+          </section>
+          <section class="powers-panel" aria-label="Power standings">
+            <div class="section-heading small">
+              <span class="eyebrow">THE BALANCE OF POWER</span
+              ><span>SUPPLY CENTERS <b>/ 18 TO WIN</b></span>
+            </div>
+            <div id="powers-list" class="powers-list"></div>
+          </section>
+        </div>
+        <aside class="command-panel">
+          <div id="seat-header" class="seat-header"></div>
+          <div class="side-tabs" role="tablist">
+            <button id="orders-tab" role="tab" aria-selected="true">
+              Command desk <span id="order-count">0</span></button
+            ><button id="diplomacy-tab" role="tab" aria-selected="false">
+              Diplomacy <span id="message-count">0</span>
+            </button>
+          </div>
+          <section id="orders-panel" class="orders-panel">
+            <div class="desk-intro">
+              <p class="eyebrow" id="desk-eyebrow">YOUR ORDERS</p>
+              <h2 id="desk-title">Every move matters.</h2>
+              <p id="desk-description">
+                Choose a unit on the map or below to write an order.
+              </p>
+            </div>
+            <div id="unit-list" class="unit-list"></div>
+            <div id="order-editor" class="order-editor" hidden></div>
+            <div id="readiness-list" class="readiness-list"></div>
+            <div class="desk-footer">
+              <div id="orders-summary" class="orders-summary"></div>
+              <button id="submit-orders" class="button primary full">
+                Submit orders <span>→</span></button
+              ><button id="cancel-orders" class="button secondary full" hidden>
+                Withdraw orders</button
+              ><button id="clear-orders" class="text-button full">
+                Clear draft orders
+              </button>
+              <p id="order-footnote">
+                Drafts stay on your device until you submit.
+              </p>
+            </div>
+          </section>
+          <section id="diplomacy-panel" class="diplomacy-panel" hidden>
+            <div class="diplomacy-heading">
+              <div>
+                <p class="eyebrow">THE CONVERSATION</p>
+                <h2>Words before war.</h2>
+              </div>
+              <button
+                id="new-private-button"
+                class="icon-button"
+                title="New private conversation"
+                aria-label="New private conversation"
+              >
+                ＋
+              </button>
+            </div>
+            <div id="channel-list" class="channel-list" role="tablist"></div>
+            <div id="recipient-banner" class="recipient-banner"></div>
+            <div
+              id="chat-log"
+              class="chat-log"
+              role="log"
+              aria-live="polite"
+            ></div>
+            <div id="staged-messages" class="staged-messages"></div>
+            <form id="message-form" class="message-form">
+              <label class="sr-only" for="message-input"
+                >Diplomatic message</label
+              ><textarea
+                id="message-input"
+                rows="3"
+                maxlength="2000"
+                placeholder="A proposal, a promise, a little persuasion…"
+              ></textarea>
+              <div class="message-actions">
+                <span id="messages-left">3 messages this round</span
+                ><button
+                  id="send-message"
+                  class="button primary compact"
+                  type="submit"
+                >
+                  Stage message →
+                </button>
+              </div>
+            </form>
+            <button id="ready-negotiation" class="button secondary full">
+              Ready · finish this round
+            </button>
+            <p id="negotiation-footnote" class="panel-footnote">
+              Your third message automatically readies you. Choose Ready earlier to finish with fewer messages.
+            </p>
+          </section>
+        </aside>
+      </section>
+    </main>
+    <dialog id="setup-dialog" class="modal setup-modal">
+      <button
+        class="modal-close icon-button"
+        data-close
+        aria-label="Close setup"
+      >
+        ×
+      </button>
+      <p class="eyebrow">A PLACE AT THE TABLE</p>
+      <h2 id="setup-title">Your world. Your next move.</h2>
+      <div class="setup-tabs">
+        <button data-setup="create" class="active">Create a table</button
+        ><button data-setup="join">Join a table</button>
+      </div>
+      <form id="create-form">
+        <div class="mode-options">
+          <label class="mode-option"
+            ><input
+              type="radio"
+              name="game_mode"
+              value="classic"
+              checked
+            /><span
+              ><strong>Classic <em>THE ORIGINAL GAME</em></strong
+              ><small
+                >The authentic rules. Seven powers, simultaneous orders, and 18
+                supply centers for a solo victory.</small
+              ></span
+            ></label
+          >
+        </div>
+        <div class="form-grid">
+          <label
+            >Table name<input
+              id="room-name"
+              name="name"
+              maxlength="48"
+              placeholder="The European Accord"
+              autocomplete="off" /></label
+          ><label
+            >Your name<input
+              id="owner-name"
+              name="owner_name"
+              maxlength="32"
+              value="Commander"
+              required
+              autocomplete="nickname" /></label
+          ><label
+            >Your power<select id="create-power" name="power"></select></label
+          ><label
+            >AI dialogue<select name="lang">
+              <option value="en">English</option>
+              <option value="zh-Hans">简体中文</option>
+            </select></label
+          >
+        </div>
+        <label class="wide-label"
+          >Room passcode <span>optional</span
+          ><input
+            name="passcode"
+            type="password"
+            maxlength="64"
+            placeholder="Leave blank for an open table"
+            autocomplete="new-password"
+        /></label>
+        <div id="setup-provider" class="provider-note"></div>
+        <div class="setup-note">
+          <span>✦</span> Invite friends before starting. AI will fill all
+          unclaimed powers.
+        </div>
+        <div class="form-error" role="alert"></div>
+        <button type="submit" class="button primary full">
+          Create table <span>→</span>
+        </button>
+      </form>
+      <form id="join-form" hidden>
+        <div class="form-grid">
+          <label
+            >Room code<input
+              id="join-code"
+              name="code"
+              placeholder="ABCDEF"
+              required
+              maxlength="12"
+              autocapitalize="characters"
+              autocomplete="off" /></label
+          ><label
+            >Your name<input
+              name="name"
+              value="Commander"
+              required
+              maxlength="32"
+              autocomplete="nickname" /></label
+          ><label class="full-field"
+            >Choose your power<select
+              id="join-power"
+              name="power"
+            ></select></label
+          ><label class="full-field"
+            >Room passcode <span>if required</span
+            ><input
+              name="passcode"
+              type="password"
+              maxlength="64"
+              autocomplete="current-password"
+          /></label>
+        </div>
+        <div class="setup-note">
+          Claim an open power or observe the public table. A saved seat in this
+          browser reconnects automatically.
+        </div>
+        <div class="form-error" role="alert"></div>
+        <button type="submit" class="button primary full">
+          Join table <span>→</span>
+        </button>
+      </form>
+    </dialog>
+    <dialog id="private-dialog" class="modal">
+      <button
+        class="modal-close icon-button"
+        data-close
+        aria-label="Close private conversation"
+      >
+        ×
+      </button>
+      <p class="eyebrow">BEHIND CLOSED DOORS</p>
+      <h2>A quieter conversation.</h2>
+      <p>
+        Only the selected powers can read this channel. Choose who gets a seat.
+      </p>
+      <form id="private-form">
+        <div id="recipient-options" class="recipient-options"></div>
+        <div class="form-error" role="alert"></div>
+        <button type="submit" class="button primary full">
+          Open private channel →
+        </button>
+      </form>
+    </dialog>
+    <dialog id="room-dialog" class="modal">
+      <button
+        class="modal-close icon-button"
+        data-close
+        aria-label="Close room details"
+      >
+        ×
+      </button>
+      <p class="eyebrow">YOUR TABLE</p>
+      <h2 id="room-modal-title">Room details</h2>
+      <div id="room-details"></div>
+      <div id="provider-details" class="provider-details"></div>
+      <div id="room-members" class="room-members"></div>
+      <div id="room-owner-actions" class="room-owner-actions">
+        <button id="start-game" class="button primary full">
+          Start the game →</button
+        ><button id="pause-game" class="button secondary full">
+          Pause game</button
+        ><label
+          >Negotiation clock<select id="timer-select">
+            <option value="0">No time limit</option>
+            <option value="90">90 seconds</option>
+            <option value="180">3 minutes</option>
+            <option value="300">5 minutes</option>
+          </select></label
+        >
+        <div class="row-actions">
+          <button id="save-game" class="button secondary">
+            Save checkpoint</button
+          ><button id="show-saves" class="button secondary">
+            Load checkpoint
+          </button>
+        </div>
+        <div id="saves-list" class="saves-list" hidden></div>
+        <button id="end-game" class="text-button danger">End this game</button>
+      </div>
+    </dialog>
+    <dialog id="history-dialog" class="modal wide-modal">
+      <button
+        class="modal-close icon-button"
+        data-close
+        aria-label="Close chronicle"
+      >
+        ×
+      </button>
+      <p class="eyebrow">THE RECORD OF A CHANGING WORLD</p>
+      <h2>Chronicle of the table.</h2>
+      <div id="result-summary"></div>
+      <div id="history-content" class="history-content">
+        The first chapter is yet to be written.
+      </div>
+    </dialog>
+    <dialog id="help-dialog" class="modal wide-modal">
+      <button
+        class="modal-close icon-button"
+        data-close
+        aria-label="Close guide"
+      >
+        ×
+      </button>
+      <p class="eyebrow">YOUR FIRST CAMPAIGN</p>
+      <h2>Diplomacy, in a few moves.</h2>
+      <div class="help-grid">
+        <article>
+          <span>01</span>
+          <h3>Make your case</h3>
+          <p>
+            Talk publicly or in a private channel. Stage up to three messages
+            per round. The third message automatically readies you; press Ready
+            earlier to finish with fewer messages. Everyone’s messages arrive together.
+            Promises are never binding.
+          </p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Write your orders</h3>
+          <p>
+            Select one of your pieces. Choose a legal hold, move, support, or
+            convoy. Every unit gets at most one order. You can edit drafts
+            freely before submission.
+          </p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Commit together</h3>
+          <p>
+            Orders resolve simultaneously. Equal strength bounces. Support adds
+            strength, but an attack can cut it. A fleet can convoy an army
+            across a sea.
+          </p>
+        </article>
+        <article>
+          <span>04</span>
+          <h3>Control the centers</h3>
+          <p>
+            Capture supply centers in autumn to sustain more units. Retreat
+            dislodged units and build at your vacant home centers. Reach 18
+            centers for a solo victory.
+          </p>
+        </article>
+      </div>
+      <div class="guide-key">
+        <strong>Reading the board</strong>
+        <p>▲ Army · ▰ Fleet · ◉ Supply center</p>
+        <p>
+          The command desk offers only engine-legal orders. A legal order can
+          still fail when another power’s orders conflict.
+        </p>
+      </div>
+      <button class="button primary" data-close>
+        Understood. To the table →
+      </button>
+    </dialog>
+  </body>
+</html>

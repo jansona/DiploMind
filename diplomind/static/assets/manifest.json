@@ -1,0 +1,72 @@
+{
+  "generator": "Blender 4.3.2",
+  "coordinateSystem": {
+    "up": "+Y",
+    "forward": "+Z",
+    "ground": "Y=0"
+  },
+  "palette": {
+    "AUSTRIA": "#C34E50",
+    "ENGLAND": "#314E72",
+    "FRANCE": "#538ABF",
+    "GERMANY": "#697078",
+    "ITALY": "#4B8C70",
+    "RUSSIA": "#A080AC",
+    "TURKEY": "#CCA65B"
+  },
+  "assets": {
+    "army": {
+      "file": "army.glb",
+      "node": "Army",
+      "bytes": 153276,
+      "triangles": 3052,
+      "size": [
+        1.0,
+        0.55503,
+        1.0
+      ],
+      "origin": "ground-center",
+      "tintMaterial": "Nation"
+    },
+    "fleet": {
+      "file": "fleet.glb",
+      "node": "Fleet",
+      "bytes": 71220,
+      "triangles": 1280,
+      "size": [
+        0.43158,
+        0.49158,
+        1.0
+      ],
+      "origin": "ground-center",
+      "tintMaterial": "Nation"
+    },
+    "center": {
+      "file": "center.glb",
+      "node": "Center",
+      "bytes": 55760,
+      "triangles": 1004,
+      "size": [
+        0.87921,
+        0.46383,
+        1.0
+      ],
+      "origin": "ground-center",
+      "tintMaterial": "Nation"
+    },
+    "board-prop": {
+      "file": "board-prop.glb",
+      "node": "BoardProp",
+      "bytes": 88496,
+      "triangles": 1744,
+      "size": [
+        1.0,
+        0.1355,
+        1.0
+      ],
+      "origin": "ground-center",
+      "tintMaterial": "Nation"
+    }
+  },
+  "license": "Original project assets, AGPL-3.0-or-later; no external asset dependencies"
+}
